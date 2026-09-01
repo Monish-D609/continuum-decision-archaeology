@@ -76,5 +76,20 @@ if ui_dir.exists():
 
     @app.get("/")
     async def serve_ui():
-        """Serve the demo UI."""
+        """Serve the main demo UI."""
         return FileResponse(str(ui_dir / "index.html"))
+
+    @app.get("/blame")
+    async def serve_blame():
+        """Serve the Blame-to-Why UI."""
+        return FileResponse(str(ui_dir / "blame.html"))
+
+    @app.get("/timeline")
+    async def serve_timeline():
+        """Serve the Temporal Lineage Timeline UI."""
+        return FileResponse(str(ui_dir / "timeline.html"))
+
+    @app.get("/radar")
+    async def serve_radar():
+        """Serve the Architectural Drift Radar UI."""
+        return FileResponse(str(ui_dir / "radar.html"))
