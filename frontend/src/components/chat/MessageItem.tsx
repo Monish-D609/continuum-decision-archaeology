@@ -17,80 +17,161 @@ interface MessageItemProps {
   onExportADR: (question: string, answer: string, citations: Citation[], confidence: string) => void;
 }
 
-function renderFormattedText(text: string): React.ReactNode {
-  const paragraphs = text.split(/\n{2,}/);
+// Strip LLM instruction echoes and JSON code blocks from answers before rendering
+function cleanAnswer(raw: string): string {
+  // Remove JSON code blocks the LLM appended
+  let text = raw.replace(/```(?:json)?[\s\S]*?```/gi, '');
+  // Remove sections the LLM echos from the prompt (everything from ## Strict to end)
+  const stripHeadings = ['## strict', '## response format', '## response', 'output valid json'];
+  const lines = text.split('\n');
+  let cutIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const lower = lines[i].toLowerCase().trim();
+    if (stripHeadings.some(h => lower.startsWith(h))) {
+      cutIdx = i;
+      break;
+    }
+  }
+  if (cutIdx !== -1) text = lines.slice(0, cutIdx).join('\n');
+  return text.trim();
+}
 
-  return paragraphs.map((block, blockIdx) => {
+function renderFormattedText(raw: string): React.ReactNode {
+  const text = cleanAnswer(raw);
+  const blocks = text.split(/\n{2,}/);
+
+  return blocks.map((block, blockIdx) => {
     const trimmed = block.trim();
     if (!trimmed) return null;
 
-    // H2 header
-    if (trimmed.startsWith('## ')) {
+    // Skip standalone horizontal rules
+    if (/^-{3,}$/.test(trimmed) || /^\*{3,}$/.test(trimmed)) return null;
+
+    // H1
+    if (trimmed.startsWith('# ') && !trimmed.startsWith('## ')) {
       return (
-        <h3 key={blockIdx} className="font-headline-sm text-on-surface font-semibold mt-4 mb-2 text-[17px]">
-          {trimmed.slice(3)}
+        <h2 key={blockIdx} className="font-headline-md text-on-surface font-bold mt-6 mb-3 text-[20px]">
+          {trimmed.slice(2)}
+        </h2>
+      );
+    }
+
+    // H2 — filter out instruction-echo headings
+    if (trimmed.startsWith('## ')) {
+      const title = trimmed.slice(3);
+      const lower = title.toLowerCase();
+      if (lower.startsWith('strict') || lower.startsWith('response format') || lower.startsWith('response')) return null;
+      return (
+        <h3 key={blockIdx} className="font-headline-sm text-on-surface font-semibold mt-5 mb-2 text-[17px]">
+          {title}
         </h3>
       );
     }
-    // H3 header (Archaeological Sections)
+
+    // H3 — Archaeological section badges
     if (trimmed.startsWith('### ')) {
       const title = trimmed.slice(4);
-      let badgeStyle = "text-primary bg-primary/10 border-primary/20";
+      let badgeStyle = 'text-primary bg-primary/10 border-primary/20';
       if (title.includes('⚰️') || title.toLowerCase().includes('graveyard')) {
-        badgeStyle = "text-unknown-rose bg-unknown-rose/10 border-unknown-rose/30";
-      } else if (title.includes('📜') || title.toLowerCase().includes('decision')) {
-        badgeStyle = "text-confirmed-emerald bg-confirmed-emerald/10 border-confirmed-emerald/30";
-      } else if (title.includes('🧬') || title.toLowerCase().includes('drift')) {
-        badgeStyle = "text-inferred-amber bg-inferred-amber/10 border-inferred-amber/30";
-      } else if (title.includes('🏛️') || title.toLowerCase().includes('context')) {
-        badgeStyle = "text-primary bg-primary/10 border-primary/20";
+        badgeStyle = 'text-unknown-rose bg-unknown-rose/10 border-unknown-rose/30';
+      } else if (title.includes('📜') || title.toLowerCase().includes('decision') || title.toLowerCase().includes('author')) {
+        badgeStyle = 'text-confirmed-emerald bg-confirmed-emerald/10 border-confirmed-emerald/30';
+      } else if (title.includes('🧬') || title.toLowerCase().includes('drift') || title.toLowerCase().includes('legacy')) {
+        badgeStyle = 'text-inferred-amber bg-inferred-amber/10 border-inferred-amber/30';
+      } else if (title.includes('🏛️') || title.toLowerCase().includes('context') || title.toLowerCase().includes('stratum')) {
+        badgeStyle = 'text-primary bg-primary/10 border-primary/20';
       }
-
       return (
-        <div key={blockIdx} className="mt-5 mb-2.5">
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border font-label-caps text-[12px] font-semibold tracking-wide ${badgeStyle}`}>
+        <div key={blockIdx} className="mt-6 mb-3">
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-semibold tracking-wide text-[13px] ${badgeStyle}`}>
             {title}
           </div>
         </div>
       );
     }
 
-    // Bullet list block
-    const bulletLines = trimmed.split('\n').filter(l => l.trim().startsWith('- ') || l.trim().startsWith('* '));
-    const allLines = trimmed.split('\n');
-    const allBullets = allLines.every(l => l.trim() === '' || l.trim().startsWith('- ') || l.trim().startsWith('* '));
-    if (allBullets && bulletLines.length > 0) {
+    const lines = trimmed.split('\n');
+
+    // Mixed or pure bullet list — collect consecutive bullet + continuation lines
+    const hasBullets = lines.some(l => l.trim().startsWith('- ') || l.trim().startsWith('* '));
+    if (hasBullets) {
+      const items: string[] = [];
+      let current = '';
+      for (const line of lines) {
+        const t = line.trim();
+        if (t.startsWith('- ') || t.startsWith('* ')) {
+          if (current) items.push(current.trim());
+          current = t.replace(/^[-*]\s+/, '');
+        } else if (t && current) {
+          current += ' ' + t;
+        } else if (!t && current) {
+          items.push(current.trim());
+          current = '';
+        }
+      }
+      if (current) items.push(current.trim());
+
       return (
-        <ul key={blockIdx} className="list-none flex flex-col gap-2 my-2 pl-2">
-          {bulletLines.map((line, i) => (
-            <li key={i} className="flex gap-2 items-start">
-              <span className="text-primary mt-1 shrink-0">▸</span>
-              <span className="font-body-md text-on-surface leading-relaxed">{renderInline(line.replace(/^[-*]\s+/, ''))}</span>
+        <ul key={blockIdx} className="list-none flex flex-col gap-2.5 my-2 pl-1">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2.5 items-start">
+              <span className="text-primary mt-[3px] shrink-0 text-[14px]">▸</span>
+              <span className="font-body-md text-on-surface leading-relaxed">{renderInline(item)}</span>
             </li>
           ))}
         </ul>
       );
     }
 
-    // Numbered list block
-    const numberedLines = allLines.filter(l => /^\d+\.\s/.test(l.trim()));
-    const allNumbered = allLines.every(l => l.trim() === '' || /^\d+\.\s/.test(l.trim()));
-    if (allNumbered && numberedLines.length > 0) {
+    // Numbered list
+    const hasNumbered = lines.some(l => /^\d+\.\s/.test(l.trim()));
+    if (hasNumbered) {
+      const items: string[] = [];
+      let current = '';
+      for (const line of lines) {
+        const t = line.trim();
+        if (/^\d+\.\s/.test(t)) {
+          if (current) items.push(current.trim());
+          current = t.replace(/^\d+\.\s+/, '');
+        } else if (t && current) {
+          current += ' ' + t;
+        }
+      }
+      if (current) items.push(current.trim());
+
       return (
-        <ol key={blockIdx} className="flex flex-col gap-2 my-2 pl-2">
-          {numberedLines.map((line, i) => (
-            <li key={i} className="flex gap-2 items-start">
-              <span className="text-primary font-code-sm font-medium shrink-0">{i + 1}.</span>
-              <span className="font-body-md text-on-surface leading-relaxed">{renderInline(line.replace(/^\d+\.\s+/, ''))}</span>
+        <ol key={blockIdx} className="flex flex-col gap-2.5 my-2 pl-1">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2.5 items-start">
+              <span className="text-primary font-code-sm font-semibold shrink-0 min-w-[20px]">{i + 1}.</span>
+              <span className="font-body-md text-on-surface leading-relaxed">{renderInline(item)}</span>
             </li>
           ))}
         </ol>
       );
     }
 
-    // Regular paragraph (with inline rendering)
+    // [CONFIRMED] / [INFERRED] tags
+    const tagMatch = trimmed.match(/^\[(CONFIRMED|INFERRED|UNKNOWN)\](.*)$/i);
+    if (tagMatch) {
+      const tag = tagMatch[1].toUpperCase();
+      const rest = tagMatch[2].trim();
+      const tagColor = tag === 'CONFIRMED'
+        ? 'text-confirmed-emerald border-confirmed-emerald/40 bg-confirmed-emerald/10'
+        : tag === 'INFERRED'
+        ? 'text-inferred-amber border-inferred-amber/40 bg-inferred-amber/10'
+        : 'text-unknown-rose border-unknown-rose/40 bg-unknown-rose/10';
+      return (
+        <p key={blockIdx} className="flex items-baseline gap-2 font-body-md text-on-surface leading-relaxed">
+          <span className={`font-code-sm font-bold text-[11px] px-1.5 py-0.5 border rounded shrink-0 ${tagColor}`}>{tag}</span>
+          <span>{renderInline(rest)}</span>
+        </p>
+      );
+    }
+
+    // Regular paragraph
     return (
-      <p key={blockIdx} className="font-body-lg text-on-surface leading-relaxed mb-0">
+      <p key={blockIdx} className="font-body-md text-on-surface leading-[1.8] tracking-[0.01em]">
         {renderInline(trimmed.replace(/\n/g, ' '))}
       </p>
     );
@@ -98,38 +179,33 @@ function renderFormattedText(text: string): React.ReactNode {
 }
 
 function renderInline(text: string): React.ReactNode {
-  // Split on bold **text**, inline code `text`, and [label](url) links
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g);
-  return parts.map((part, partIdx) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return (
-        <strong key={partIdx} className="text-on-surface font-semibold">
-          {part.slice(2, -2)}
-        </strong>
-      );
+  // Match: ***bold-italic***, **bold**, *italic*, `code`, [label](url)
+  const parts = text.split(/(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith('***') && part.endsWith('***')) {
+      return <strong key={idx} className="text-on-surface font-bold italic">{part.slice(3, -3)}</strong>;
     }
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return (
-        <code
-          key={partIdx}
-          className="font-code-sm bg-surface-container-highest px-1.5 py-0.5 rounded text-primary text-[12px]"
-        >
-          {part.slice(1, -1)}
-        </code>
-      );
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={idx} className="text-on-surface font-semibold">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+      return <em key={idx} className="text-on-surface-variant italic">{part.slice(1, -1)}</em>;
+    }
+    if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+      return <code key={idx} className="font-code-sm bg-surface-container-highest px-1.5 py-0.5 rounded text-primary text-[12px]">{part.slice(1, -1)}</code>;
     }
     const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
     if (linkMatch) {
       return (
         <a
-          key={partIdx}
+          key={idx}
           href={linkMatch[2]}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 bg-primary/15 hover:bg-primary text-primary hover:text-on-primary font-code-sm font-semibold px-2 py-0.5 rounded-md border border-primary/40 hover:border-primary transition-all text-[12px] align-baseline no-underline shadow-xs mx-0.5"
+          className="inline-flex items-center gap-1 bg-primary/15 hover:bg-primary text-primary hover:text-on-primary font-code-sm font-semibold px-2 py-0.5 rounded-md border border-primary/40 hover:border-primary transition-all text-[12px] align-middle no-underline mx-0.5"
         >
           <span>{linkMatch[1]}</span>
-          <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+          <span className="material-symbols-outlined text-[11px]">open_in_new</span>
         </a>
       );
     }

@@ -199,6 +199,66 @@ def synthesize_answer(
             llm.close()
 
 
+def _fix_json_strings(text: str) -> str:
+    """Escape literal newlines/tabs inside JSON string values without a full parser."""
+    result: list[str] = []
+    in_string = False
+    escape_next = False
+    for ch in text:
+        if escape_next:
+            result.append(ch)
+            escape_next = False
+            continue
+        if ch == '\\':
+            result.append(ch)
+            escape_next = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            result.append(ch)
+            continue
+        if in_string:
+            if ch == '\n':
+                result.append('\\n')
+                continue
+            if ch == '\r':
+                result.append('\\r')
+                continue
+            if ch == '\t':
+                result.append('\\t')
+                continue
+        result.append(ch)
+    return ''.join(result)
+
+
+def _extract_prose_before_json(raw: str) -> str:
+    """
+    Extract the prose answer the LLM wrote BEFORE any JSON code block.
+    Falls back to stripping the JSON block from the tail of the response.
+    """
+    import re
+    # Find the first occurrence of a JSON fence or lone '{'  at the start of a line
+    fence_idx = raw.find('```json')
+    if fence_idx == -1:
+        fence_idx = raw.find('```')
+    # Also look for lines that start with '{'  and contain '"answer"' or '"citations"'
+    block_match = re.search(r'\n\s*\{[^\n]*"(?:answer|citations)"', raw)
+    if block_match:
+        fence_idx = block_match.start() if fence_idx == -1 else min(fence_idx, block_match.start())
+
+    if fence_idx > 80:
+        prose = raw[:fence_idx].strip()
+        # Strip trailing instruction echoes
+        for stop_phrase in ['## Strict', '## Response Format', '## Response', 'Output valid JSON']:
+            idx = prose.lower().find(stop_phrase.lower())
+            if idx != -1:
+                prose = prose[:idx].strip()
+        return prose
+
+    # Fallback: strip any JSON fences from the full text
+    return re.sub(r'```(?:json)?\s*\{[\s\S]*?\}\s*```', '', raw, flags=re.DOTALL).strip()
+
+
 def _parse_synthesis_response(raw: str, records: list[dict]) -> QueryResponse:
     """Parse the LLM's JSON response into a QueryResponse."""
     import re
@@ -206,53 +266,59 @@ def _parse_synthesis_response(raw: str, records: list[dict]) -> QueryResponse:
     cleaned = raw.strip()
     parsed = None
 
-    # 1. Try parsing directly
+    # --- Attempt 1: direct parse ---
     try:
         parsed = json.loads(cleaned)
     except json.JSONDecodeError:
         pass
 
-    # 2. Try extracting from ```json ... ``` code fence
+    # --- Attempt 2: fix literal newlines then parse directly ---
     if not parsed:
-        fence_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw, re.DOTALL)
+        try:
+            parsed = json.loads(_fix_json_strings(cleaned))
+        except json.JSONDecodeError:
+            pass
+
+    # --- Attempt 3: extract from ```json ... ``` code fence ---
+    if not parsed:
+        fence_match = re.search(r'```(?:json)?\s*(\{[\s\S]*?\})\s*```', raw, re.DOTALL)
         if fence_match:
-            try:
-                parsed = json.loads(fence_match.group(1))
-            except json.JSONDecodeError:
-                pass
+            candidate = fence_match.group(1)
+            for attempt in (candidate, _fix_json_strings(candidate)):
+                try:
+                    parsed = json.loads(attempt)
+                    break
+                except json.JSONDecodeError:
+                    pass
 
-    # 3. Try finding any JSON object starting with {"answer" or {"citations"
+    # --- Attempt 4: first '{' to last '}' with newline fix ---
     if not parsed:
-        json_match = re.search(r'(\{(?:[^{}]|(?R))*\})', cleaned, re.DOTALL) or re.search(r'(\{.*\})', cleaned, re.DOTALL)
-        if json_match:
-            try:
-                parsed = json.loads(json_match.group(1))
-            except json.JSONDecodeError:
-                # Try from the last '{' to the last '}'
-                first_brace = cleaned.find('{')
-                last_brace = cleaned.rfind('}')
-                if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
-                    try:
-                        parsed = json.loads(cleaned[first_brace:last_brace + 1])
-                    except json.JSONDecodeError:
-                        pass
+        first_brace = cleaned.find('{')
+        last_brace = cleaned.rfind('}')
+        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+            candidate = cleaned[first_brace:last_brace + 1]
+            for attempt in (candidate, _fix_json_strings(candidate)):
+                try:
+                    parsed = json.loads(attempt)
+                    break
+                except json.JSONDecodeError:
+                    pass
 
-    # Fallback if no valid JSON structure could be extracted
+    # --- Fallback: no valid JSON; return prose-only answer cleanly ---
     if not parsed or not isinstance(parsed, dict):
-        logger.warning("Could not parse synthesis response as JSON, using cleaned text as answer")
-        # Strip out duplicate code block if present
-        clean_ans = re.sub(r'```(?:json)?\s*\{.*?\}\s*```', '', raw, flags=re.DOTALL).strip() or raw
+        logger.warning("Could not parse synthesis response as JSON; extracting prose answer")
+        prose = _extract_prose_before_json(raw)
+        if not prose:
+            prose = raw.strip()
         return QueryResponse(
-            answer=clean_ans,
+            answer=prose,
             citations=[],
             confidence_summary="partial_evidence",
-            decision_records_used=[
-                r.get("id", "") for r in records if r.get("id")
-            ],
+            decision_records_used=[r.get("id", "") for r in records if r.get("id")],
             is_insufficient_evidence=False,
         )
 
-    # Build citations
+    # --- Build citations ---
     citations = []
     for c in parsed.get("citations", []):
         try:
@@ -268,7 +334,7 @@ def _parse_synthesis_response(raw: str, records: list[dict]) -> QueryResponse:
         except Exception as e:
             logger.warning(f"Failed to parse citation: {e}")
 
-    # Build confidence breakdown
+    # --- Build confidence breakdown ---
     conf_counts = Counter(c.confidence.value for c in citations)
     from continuum.models import ConfidenceBreakdown
     breakdown = ConfidenceBreakdown(
@@ -282,8 +348,6 @@ def _parse_synthesis_response(raw: str, records: list[dict]) -> QueryResponse:
         citations=citations,
         confidence_summary=parsed.get("confidence_summary", "partial_evidence"),
         confidence_breakdown=breakdown,
-        decision_records_used=[
-            r.get("id", "") for r in records if r.get("id")
-        ],
+        decision_records_used=[r.get("id", "") for r in records if r.get("id")],
         is_insufficient_evidence=parsed.get("is_insufficient_evidence", False),
     )
