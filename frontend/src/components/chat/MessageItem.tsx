@@ -126,9 +126,10 @@ function renderInline(text: string): React.ReactNode {
           href={linkMatch[2]}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary underline underline-offset-2 hover:text-primary-fixed transition-colors"
+          className="inline-flex items-center gap-1 bg-primary/15 hover:bg-primary text-primary hover:text-on-primary font-code-sm font-semibold px-2 py-0.5 rounded-md border border-primary/40 hover:border-primary transition-all text-[12px] align-baseline no-underline shadow-xs mx-0.5"
         >
-          {linkMatch[1]}
+          <span>{linkMatch[1]}</span>
+          <span className="material-symbols-outlined text-[12px]">open_in_new</span>
         </a>
       );
     }

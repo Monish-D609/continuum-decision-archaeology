@@ -166,10 +166,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedRepo }) => {
                                   href={ev.source_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 font-code-sm text-[12px] whitespace-nowrap"
+                                  className="bg-primary/15 hover:bg-primary text-primary hover:text-on-primary border border-primary/40 hover:border-primary px-2.5 py-1 rounded-lg font-code-sm text-[12px] font-semibold transition-all shadow-sm flex items-center gap-1.5 shrink-0 group/link whitespace-nowrap"
                                 >
                                   <span>View Source</span>
-                                  <span className="material-symbols-outlined text-[14px]">
+                                  <span className="material-symbols-outlined text-[13px] group-hover/link:translate-x-0.5 transition-transform">
                                     open_in_new
                                   </span>
                                 </a>

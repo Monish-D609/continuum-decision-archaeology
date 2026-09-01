@@ -53,10 +53,10 @@ export const CitationProofCard: React.FC<CitationProofCardProps> = ({ citation }
           href={citation.source_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 text-[12px] font-code-sm"
+          className="bg-primary/15 hover:bg-primary text-primary hover:text-on-primary border border-primary/40 hover:border-primary px-2.5 py-1 rounded-lg font-code-sm text-[12px] font-semibold transition-all shadow-sm flex items-center gap-1.5 shrink-0 group/link"
         >
           <span>View Source</span>
-          <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+          <span className="material-symbols-outlined text-[13px] group-hover/link:translate-x-0.5 transition-transform">open_in_new</span>
         </a>
       </div>
 
