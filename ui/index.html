@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Continuum — Decision Archaeology</title>
-    <meta name="description" content="Recover the WHY behind engineering decisions from GitHub history. Citation-grounded answers from PR and issue discussions.">
+    <meta name="description" content="Recover the WHY behind engineering decisions from GitHub history. Citation-grounded answers with zero hallucination.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -30,11 +30,53 @@
                 <h1 class="header-title">Continuum</h1>
                 <span class="header-badge">Decision Archaeology</span>
             </div>
-            <div class="header-status" id="statusIndicator">
-                <span class="status-dot"></span>
-                <span class="status-text">Connecting...</span>
+
+            <div class="header-controls">
+                <!-- Repo switcher -->
+                <div class="repo-switcher">
+                    <label for="repoSelect" class="repo-label">Repository</label>
+                    <select id="repoSelect" class="repo-select">
+                        <option value="">All indexed repos</option>
+                        <option value="facebook/react">facebook/react</option>
+                        <option value="tiangolo/fastapi">tiangolo/fastapi</option>
+                        <option value="reduxjs/redux">reduxjs/redux</option>
+                        <option value="django/django">django/django</option>
+                        <option value="vuejs/vue">vuejs/vue</option>
+                    </select>
+                </div>
+
+                <!-- Nav links -->
+                <nav class="header-nav">
+                    <a href="/static/blame.html" class="nav-link" title="Blame-to-Why">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3h10M3 6h7M3 9h5M3 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        Blame
+                    </a>
+                    <a href="/static/timeline.html" class="nav-link" title="Decision Timeline">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="4" cy="12" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 4h2M6 12h2M10 8H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        Timeline
+                    </a>
+                    <a href="/static/radar.html" class="nav-link" title="Drift Radar">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        Radar
+                    </a>
+                </nav>
+
+                <div class="header-status" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connecting...</span>
+                </div>
             </div>
         </header>
+
+        <!-- Mode tabs -->
+        <div class="mode-tabs">
+            <button class="mode-tab active" id="tabQuery" data-mode="query">
+                💡 Ask Why
+            </button>
+            <button class="mode-tab" id="tabGraveyard" data-mode="graveyard">
+                ⚰️ Graveyard
+            </button>
+        </div>
 
         <!-- Chat Area -->
         <main class="chat-area" id="chatArea">
@@ -53,9 +95,9 @@
                         </defs>
                     </svg>
                 </div>
-                <h2>Ask about past decisions</h2>
-                <p>Continuum recovers the <strong>why</strong> behind engineering decisions from GitHub history — PRs, issues, and commits — with cited evidence you can verify.</p>
-                <div class="example-queries">
+                <h2 id="welcomeTitle">Ask about past decisions</h2>
+                <p id="welcomeDesc">Continuum recovers the <strong>why</strong> behind engineering decisions from GitHub history — PRs, issues, and commits — with cited evidence you can verify.</p>
+                <div class="example-queries" id="exampleQueries">
                     <button class="example-query" data-query="Why were React Hooks introduced instead of keeping class components?">
                         <span class="eq-icon">💡</span>
                         Why were Hooks introduced?

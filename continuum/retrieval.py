@@ -60,6 +60,7 @@ def hybrid_retrieve(
     semantic_top_k: int = SEMANTIC_TOP_K,
     bm25_top_k: int = BM25_TOP_K,
     final_top_k: int = FINAL_TOP_K,
+    repo_filter: str = None,
 ) -> list[dict]:
     """
     Perform hybrid retrieval: semantic + BM25 + RRF fusion.
@@ -67,12 +68,15 @@ def hybrid_retrieve(
     Returns the top-k decision records ranked by combined relevance.
     Each record includes 'rrf_score', 'similarity' (from semantic), and
     'bm25_score' (from keyword).
+
+    repo_filter: optional 'owner/repo' string to scope results.
     """
     # 1. Semantic search via pgvector
     query_embedding = embed_text(query)
     semantic_results = semantic_search(
         query_embedding=query_embedding,
         top_k=semantic_top_k,
+        repo_filter=repo_filter,
     )
     logger.info(f"Semantic search returned {len(semantic_results)} results")
 

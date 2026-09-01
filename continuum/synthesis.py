@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import Optional
+from collections import Counter
 
 from continuum.llm_client import LLMClient, LLMError
 from continuum.models import QueryResponse, Citation, ConfidenceLevel
@@ -59,7 +60,9 @@ Provide your answer in this JSON structure:
       "source_url": "<GitHub URL>",
       "source_type": "pr|issue|commit",
       "source_id": "<number or SHA>",
-      "confidence": "confirmed|inferred|unknown"
+      "confidence": "confirmed|inferred|unknown",
+      "author": "<GitHub username of the person who made this statement, or null if unknown>",
+      "quote": "<short verbatim or near-verbatim quote (max 120 chars) from the source, or null if no clear quote>"
     }
   ],
   "confidence_summary": "strong_evidence|partial_evidence|insufficient_evidence",
@@ -242,14 +245,26 @@ def _parse_synthesis_response(raw: str, records: list[dict]) -> QueryResponse:
                 source_type=c.get("source_type", "pr"),
                 source_id=str(c.get("source_id", "")),
                 confidence=ConfidenceLevel(c.get("confidence", "unknown")),
+                author=c.get("author"),
+                quote=c.get("quote"),
             ))
         except Exception as e:
             logger.warning(f"Failed to parse citation: {e}")
+
+    # Build confidence breakdown
+    conf_counts = Counter(c.confidence.value for c in citations)
+    from continuum.models import ConfidenceBreakdown
+    breakdown = ConfidenceBreakdown(
+        confirmed=conf_counts.get("confirmed", 0),
+        inferred=conf_counts.get("inferred", 0),
+        unknown=conf_counts.get("unknown", 0),
+    )
 
     return QueryResponse(
         answer=parsed.get("answer", raw),
         citations=citations,
         confidence_summary=parsed.get("confidence_summary", "partial_evidence"),
+        confidence_breakdown=breakdown,
         decision_records_used=[
             r.get("id", "") for r in records if r.get("id")
         ],

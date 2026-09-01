@@ -1,0 +1,101 @@
+name: "Continuum — Déjà Vu Anti-Pattern Check"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  deja-vu-check:
+    name: Check for previously-rejected patterns
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Call Continuum Déjà Vu API
+        id: deja_vu
+        env:
+          CONTINUUM_API_URL: ${{ secrets.CONTINUUM_API_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Default to localhost if secret not set (local dev)
+          API_URL="${CONTINUUM_API_URL:-http://localhost:8000}"
+
+          # Escape special characters for JSON payload
+          TITLE_JSON=$(python3 -c "import json,os; print(json.dumps(os.environ['PR_TITLE']))")
+          BODY_JSON=$(python3 -c "import json,os; print(json.dumps(os.environ.get('PR_BODY','')))")
+          REPO_JSON=$(python3 -c "import json,os; print(json.dumps(os.environ['REPO']))")
+
+          RESPONSE=$(curl -s -X POST "${API_URL}/api/deja-vu" \
+            -H "Content-Type: application/json" \
+            -d "{\"pr_title\": ${TITLE_JSON}, \"pr_description\": ${BODY_JSON}, \"repo\": ${REPO_JSON}}" \
+            --max-time 20 || echo '{"has_matches": false}')
+
+          echo "response=${RESPONSE}" >> $GITHUB_OUTPUT
+
+          HAS_MATCHES=$(echo "${RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('has_matches', False))" 2>/dev/null || echo "False")
+          echo "has_matches=${HAS_MATCHES}" >> $GITHUB_OUTPUT
+
+          # Write comment body to file (handles multiline safely)
+          echo "${RESPONSE}" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          comment = d.get('github_comment', '')
+          if comment:
+              with open('deja_vu_comment.txt', 'w') as f:
+                  f.write(comment)
+          " 2>/dev/null || true
+
+      - name: Post Déjà Vu Warning Comment
+        if: steps.deja_vu.outputs.has_matches == 'True'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let body = '';
+            try {
+              body = fs.readFileSync('deja_vu_comment.txt', 'utf8');
+            } catch (e) {
+              body = '⚠️ **Continuum detected a possible déjà vu pattern** — check the Continuum decision archive for similar rejected approaches.';
+            }
+
+            // Check if we already commented on this PR to avoid duplicates
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+
+            const existingComment = comments.data.find(c =>
+              c.body.includes('Continuum — Déjà Vu') ||
+              c.body.includes('Continuum detected a possible')
+            );
+
+            if (existingComment) {
+              // Update existing comment instead of posting a new one
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body,
+              });
+              console.log('Updated existing Déjà Vu comment');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: body,
+              });
+              console.log('Posted new Déjà Vu warning comment');
+            }
+
+      - name: No matches found
+        if: steps.deja_vu.outputs.has_matches != 'True'
+        run: echo "✅ No previously-rejected patterns detected for this PR."

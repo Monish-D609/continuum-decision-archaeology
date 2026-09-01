@@ -1,0 +1,50 @@
+1. "Déjà Vu" & Anti-Pattern Sentinel (Proactive PR Bot)
+   A GitHub Action that analyzes open PRs and automatically posts review comments 
+   warning developers if their proposed approach was previously attempted, 
+   benchmarked, and rejected in past PRs/issues.
+
+2. Blame-to-Why (Semantic Git Blame with Decision Depth)
+   An interactive code viewer where clicking a line of code displays not just 
+   who committed it and when, but the deeper PR review debates and tradeoff 
+   discussions that justified that specific line.
+
+3. Reverse ADR Generator (Automated Architecture Decision Records)
+   Automatically converts chaotic 50+ comment PR debates and issue threads into 
+   standardized, downloadable Markdown ADRs (Context, Decision, Consequences, 
+   Rejected Alternatives) ready for committing to /docs/adr/.
+
+4. Native Model Context Protocol (MCP) Server
+   An MCP server (mcp-continuum) allowing AI coding agents (Cursor, Claude Code, 
+   Windsurf, Copilot) to query the team's historical decision graph natively 
+   so they don't generate code that violates past architectural conventions.
+
+5. "The Graveyard" (Explicit Search for Rejected Alternatives)
+   A dedicated search mode and UI filter that surfaces abandoned prototypes, 
+   failed experiments, and rejected RFCs along with the exact reasons why 
+   they were discarded.
+
+6. Temporal Decision Lineage & Drift Graph (Evolutionary Timeline)
+   Tracks how architectural decisions evolved over time (Genesis -> Modification -> 
+   Reversion) rather than treating git history as flat text, preventing stale or 
+   deprecated rationales from being served.
+
+7. "Honest Gap" Zero-Hallucination Confidence Matrix
+   Classifies every claim with evidence tags (Confirmed by Author, Inferred from 
+   Review, or Unknown Gap), explicitly declaring when historical records are 
+   insufficient instead of fabricating rationales.
+
+8. Multi-Repository Switcher with Pre-Ingested Industry Benchmarks
+    A UI dropdown allowing judges to switch between real-world open-source 
+    repositories (e.g., React, Redux, FastAPI) to test queries against famous, 
+    verifiable architectural debates live.
+
+9. Citation Proof Cards with Deep-Link Navigation
+    Rich UI cards attached to every response containing verbatim quotes, 
+    author avatars, source badges (PR / Issue / Commit), and direct jump links 
+    to the exact line/comment on GitHub.
+
+10. Contradiction & Architectural Drift Radar
+   Scans new code commits to detect silent violations of unwritten, foundational 
+   architectural rules established in past PRs (e.g., bypassing an event bus 
+   with direct database writes).
+

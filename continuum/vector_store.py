@@ -167,10 +167,13 @@ def semantic_search(
     query_embedding: list[float],
     top_k: int = SEMANTIC_TOP_K,
     threshold: float = 0.0,
+    repo_filter: str = None,
 ) -> list[dict]:
     """
     Search for similar decision records using cosine similarity.
     Returns records sorted by descending similarity.
+    If repo_filter is set (e.g. 'facebook/react'), only records whose
+    source_url contains that string are returned.
     """
     client = _get_client()
 
@@ -178,22 +181,36 @@ def semantic_search(
         "match_decisions",
         {
             "query_embedding": query_embedding,
-            "match_count": top_k,
+            "match_count": top_k * 3 if repo_filter else top_k,  # over-fetch when filtering
             "match_threshold": threshold,
         },
     ).execute()
 
-    return result.data if result.data else []
+    records = result.data if result.data else []
+
+    if repo_filter and records:
+        repo_url_prefix = f"https://github.com/{repo_filter}"
+        records = [r for r in records if r.get("source_url", "").startswith(repo_url_prefix)]
+        records = records[:top_k]
+
+    return records
 
 
-def get_all_records() -> list[dict]:
-    """Fetch all decision records (for BM25 index building)."""
+def get_all_records(repo_filter: str = None) -> list[dict]:
+    """Fetch all decision records (for BM25 index building).
+
+    If repo_filter is set (e.g. 'facebook/react'), only records for
+    that repository are returned.
+    """
     client = _get_client()
-    result = (
+    query = (
         client.table("decision_records")
-        .select("id, title, decision_summary, record_json, source_url, text_content")
-        .execute()
+        .select("id, title, decision_summary, record_json, source_url, text_content, source_type, source_date")
     )
+    if repo_filter:
+        repo_url_prefix = f"https://github.com/{repo_filter}"
+        query = query.like("source_url", f"{repo_url_prefix}%")
+    result = query.execute()
     return result.data if result.data else []
 
 
@@ -226,3 +243,59 @@ def delete_all_records() -> None:
     client = _get_client()
     client.table("decision_records").delete().neq("id", "").execute()
     logger.info("Deleted all decision records from Supabase")
+
+
+def get_timeline(
+    query_embedding: list[float],
+    top_k: int = 30,
+    repo_filter: str = None,
+) -> list[dict]:
+    """
+    Fetch decisions relevant to a query, sorted chronologically by source_date.
+    Used by the /api/timeline endpoint.
+    """
+    records = semantic_search(
+        query_embedding=query_embedding,
+        top_k=top_k,
+        repo_filter=repo_filter,
+    )
+    # Sort by source_date ascending (oldest first), nulls last
+    records.sort(
+        key=lambda r: (r.get("source_date") or "9999-99-99"),
+    )
+    return records
+
+
+def get_rejected_records(
+    query_embedding: list[float],
+    top_k: int = 10,
+    repo_filter: str = None,
+) -> list[dict]:
+    """
+    Fetch decision records that contain rejected alternatives.
+    Used by the /api/graveyard endpoint.
+    """
+    import json as _json
+
+    # Over-fetch and then filter for records with rejected alternatives
+    candidates = semantic_search(
+        query_embedding=query_embedding,
+        top_k=top_k * 4,
+        repo_filter=repo_filter,
+    )
+
+    results = []
+    for r in candidates:
+        rec = r.get("record_json", {})
+        if isinstance(rec, str):
+            try:
+                rec = _json.loads(rec)
+            except Exception:
+                rec = {}
+        alts = rec.get("alternatives_considered", [])
+        if any(a.get("rejected") for a in alts if isinstance(a, dict)):
+            results.append(r)
+        if len(results) >= top_k:
+            break
+
+    return results

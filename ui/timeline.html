@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decision Timeline — Continuum</title>
+    <meta name="description" content="Visualize how engineering decisions evolved chronologically.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="header-brand">
+                <a href="/" class="back-link">← Continuum</a>
+                <h1 class="header-title">Decision Timeline</h1>
+                <span class="header-badge">Temporal Lineage</span>
+            </div>
+            <div class="header-controls">
+                <div class="repo-switcher">
+                    <label for="repoSelect" class="repo-label">Repository</label>
+                    <select id="repoSelect" class="repo-select">
+                        <option value="">All indexed repos</option>
+                        <option value="facebook/react">facebook/react</option>
+                        <option value="tiangolo/fastapi">tiangolo/fastapi</option>
+                        <option value="reduxjs/redux">reduxjs/redux</option>
+                        <option value="django/django">django/django</option>
+                        <option value="vuejs/vue">vuejs/vue</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <main class="timeline-main">
+            <div class="blame-intro">
+                <h2>How did this decision evolve?</h2>
+                <p>Enter a topic to see all related architectural decisions sorted chronologically — from the genesis of an idea through its modifications and reversals.</p>
+            </div>
+
+            <div class="blame-form-card">
+                <form id="timelineForm">
+                    <div class="field-group">
+                        <label for="topicInput">Topic or concept</label>
+                        <input type="text" id="topicInput" class="text-input" placeholder="e.g. 'state management', 'API design', 'authentication'" maxlength="300">
+                    </div>
+                    <button type="submit" id="timelineBtn" class="primary-btn" disabled>
+                        ⏳ Build Timeline
+                    </button>
+                </form>
+            </div>
+
+            <div id="timelineResult" style="display:none">
+                <div class="timeline-header">
+                    <h3 id="timelineTitle"></h3>
+                    <span id="timelineCount" class="header-badge"></span>
+                </div>
+                <div class="timeline-track" id="timelineTrack"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        const form = document.getElementById('timelineForm');
+        const topicInput = document.getElementById('topicInput');
+        const timelineBtn = document.getElementById('timelineBtn');
+        const timelineResult = document.getElementById('timelineResult');
+        const timelineTitle = document.getElementById('timelineTitle');
+        const timelineCount = document.getElementById('timelineCount');
+        const timelineTrack = document.getElementById('timelineTrack');
+        const repoSelect = document.getElementById('repoSelect');
+
+        topicInput.addEventListener('input', () => { timelineBtn.disabled = !topicInput.value.trim(); });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!topicInput.value.trim()) return;
+            timelineBtn.disabled = true;
+            timelineBtn.textContent = '⏳ Loading...';
+            timelineResult.style.display = 'none';
+
+            const params = new URLSearchParams({ query: topicInput.value, top_k: 20 });
+            if (repoSelect.value) params.set('repo', repoSelect.value);
+
+            try {
+                const res = await fetch(`${API_BASE}/api/timeline?${params}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                renderTimeline(data);
+            } catch (e) {
+                timelineTrack.innerHTML = `<p style="color:var(--error)">⚠️ ${e.message}</p>`;
+                timelineResult.style.display = 'block';
+            } finally {
+                timelineBtn.textContent = '⏳ Build Timeline';
+                timelineBtn.disabled = false;
+            }
+        });
+
+        function renderTimeline(data) {
+            timelineTitle.textContent = `Timeline: "${data.query}"`;
+            timelineCount.textContent = `${data.total} events`;
+
+            if (!data.events || data.events.length === 0) {
+                timelineTrack.innerHTML = '<p class="no-results">No timeline events found for this topic.</p>';
+                timelineResult.style.display = 'block';
+                return;
+            }
+
+            // Group events by year
+            const byYear = {};
+            data.events.forEach(e => {
+                const year = e.source_date ? e.source_date.substring(0, 4) : 'Unknown';
+                if (!byYear[year]) byYear[year] = [];
+                byYear[year].push(e);
+            });
+
+            let html = '';
+            Object.keys(byYear).sort().forEach(year => {
+                html += `<div class="timeline-year-group">`;
+                html += `<div class="timeline-year-marker">${year}</div>`;
+                html += `<div class="timeline-events">`;
+                byYear[year].forEach((ev, i) => {
+                    const date = ev.source_date ? ev.source_date.substring(0, 10) : '';
+                    const typeIcon = ev.source_type === 'pr' ? '⤴' : ev.source_type === 'issue' ? '●' : '◆';
+                    html += `
+                        <div class="timeline-event">
+                            <div class="timeline-dot ${ev.source_type}"></div>
+                            <div class="timeline-card">
+                                <div class="timeline-card-header">
+                                    <span class="timeline-type">${typeIcon} ${ev.source_type.toUpperCase()}</span>
+                                    ${date ? `<span class="timeline-date">${date}</span>` : ''}
+                                </div>
+                                <a href="${escHtml(ev.source_url)}" target="_blank" rel="noopener" class="timeline-card-title">${escHtml(ev.title)}</a>
+                                <p class="timeline-card-summary">${escHtml(ev.decision_summary || '')}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+
+            timelineTrack.innerHTML = html;
+            timelineResult.style.display = 'block';
+        }
+
+        function escHtml(t) { const d = document.createElement('div'); d.textContent = t||''; return d.innerHTML; }
+    </script>
+</body>
+</html>

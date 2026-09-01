@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blame-to-Why — Continuum</title>
+    <meta name="description" content="Explain WHY any code snippet exists using historical PR and issue evidence.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="header-brand">
+                <a href="/" class="back-link">← Continuum</a>
+                <h1 class="header-title">Blame-to-Why</h1>
+                <span class="header-badge">Semantic Git Blame</span>
+            </div>
+            <div class="header-controls">
+                <div class="repo-switcher">
+                    <label for="repoSelect" class="repo-label">Repository</label>
+                    <select id="repoSelect" class="repo-select">
+                        <option value="">All indexed repos</option>
+                        <option value="facebook/react">facebook/react</option>
+                        <option value="tiangolo/fastapi">tiangolo/fastapi</option>
+                        <option value="reduxjs/redux">reduxjs/redux</option>
+                        <option value="django/django">django/django</option>
+                        <option value="vuejs/vue">vuejs/vue</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <main class="blame-main">
+            <div class="blame-intro">
+                <h2>Why does this code exist?</h2>
+                <p>Paste a code snippet — Continuum searches GitHub PR discussions, issue threads, and commit debates to surface the architectural reasoning behind it.</p>
+            </div>
+
+            <div class="blame-form-card">
+                <form id="blameForm">
+                    <div class="blame-fields">
+                        <div class="field-group">
+                            <label for="filePathInput">File path (optional)</label>
+                            <input type="text" id="filePathInput" class="text-input" placeholder="e.g. src/auth/gateway.py" maxlength="200">
+                        </div>
+                        <div class="field-group">
+                            <label for="codeInput">Code snippet <span class="required">*</span></label>
+                            <textarea id="codeInput" class="code-textarea" placeholder="Paste the code snippet you want to understand..." rows="8" maxlength="5000"></textarea>
+                        </div>
+                    </div>
+                    <button type="submit" id="blameBtn" class="primary-btn" disabled>
+                        🔍 Explain Why This Exists
+                    </button>
+                </form>
+            </div>
+
+            <!-- Result -->
+            <div class="blame-result" id="blameResult" style="display:none">
+                <div class="result-header">
+                    <h3>🧬 Decision Archaeology Result</h3>
+                    <button id="exportBlameAdrBtn" class="action-btn" style="display:none">📄 Export as ADR</button>
+                </div>
+                <div id="blameAnswer" class="answer-text"></div>
+                <div id="blameConfidence"></div>
+                <div id="blameCitations" class="citations-section"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        const form = document.getElementById('blameForm');
+        const codeInput = document.getElementById('codeInput');
+        const filePathInput = document.getElementById('filePathInput');
+        const blameBtn = document.getElementById('blameBtn');
+        const blameResult = document.getElementById('blameResult');
+        const blameAnswer = document.getElementById('blameAnswer');
+        const blameConfidence = document.getElementById('blameConfidence');
+        const blameCitations = document.getElementById('blameCitations');
+        const repoSelect = document.getElementById('repoSelect');
+        let lastData = null;
+
+        codeInput.addEventListener('input', () => {
+            blameBtn.disabled = !codeInput.value.trim();
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!codeInput.value.trim()) return;
+
+            blameBtn.disabled = true;
+            blameBtn.textContent = '⏳ Searching decision records...';
+            blameResult.style.display = 'none';
+
+            const body = { code_snippet: codeInput.value };
+            if (filePathInput.value) body.file_path = filePathInput.value;
+            if (repoSelect.value) body.repo = repoSelect.value;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/blame`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                lastData = data;
+                renderResult(data);
+            } catch (e) {
+                blameAnswer.innerHTML = `<span style="color:var(--error)">⚠️ ${e.message}</span>`;
+                blameResult.style.display = 'block';
+            } finally {
+                blameBtn.textContent = '🔍 Explain Why This Exists';
+                blameBtn.disabled = false;
+            }
+        });
+
+        function renderResult(data) {
+            // Answer
+            blameAnswer.innerHTML = renderMarkdownLinks(data.answer);
+
+            // Confidence
+            const bd = data.confidence_breakdown || {};
+            const total = (bd.confirmed||0) + (bd.inferred||0) + (bd.unknown||0);
+            blameConfidence.innerHTML = `
+                <span class="confidence-badge ${data.confidence_summary}">
+                    ${data.confidence_summary.replace(/_/g,' ')}
+                </span>
+                ${total > 0 ? `<span class="conf-counts">${bd.confirmed||0} confirmed · ${bd.inferred||0} inferred · ${bd.unknown||0} unknown</span>` : ''}
+            `;
+
+            // Citations
+            if (data.citations && data.citations.length > 0) {
+                blameCitations.innerHTML = `<div class="citations-title">📎 Evidence Sources</div><div class="citation-cards">` +
+                    data.citations.map(c => renderCitationCard(c)).join('') +
+                    `</div>`;
+                const exportBtn = document.getElementById('exportBlameAdrBtn');
+                exportBtn.style.display = 'inline-flex';
+                exportBtn.onclick = () => exportADR(data);
+            } else {
+                blameCitations.innerHTML = '';
+            }
+
+            blameResult.style.display = 'block';
+        }
+
+        async function exportADR(data) {
+            const question = filePathInput.value
+                ? `Why does the code in ${filePathInput.value} exist?`
+                : 'Why does this code exist?';
+            const res = await fetch(`${API_BASE}/api/export-adr`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question, answer: data.answer, citations: data.citations, confidence_summary: data.confidence_summary }),
+            });
+            if (!res.ok) return;
+            const d = await res.json();
+            const blob = new Blob([d.content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = d.filename; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function renderCitationCard(c) {
+            const badgeClass = c.confidence === 'confirmed' ? 'badge-confirmed' : c.confidence === 'inferred' ? 'badge-inferred' : 'badge-unknown';
+            const authorHtml = c.author ? `<div class="citation-author"><img class="author-avatar" src="https://github.com/${c.author}.png?size=20" alt="@${c.author}" onerror="this.style.display='none'"><span>@${c.author}</span></div>` : '';
+            const quoteHtml = c.quote ? `<blockquote class="citation-quote">"${escHtml(c.quote)}"</blockquote>` : '';
+            return `<div class="citation-card"><div class="citation-card-header"><span class="citation-badge ${badgeClass}">${c.confidence}</span>${authorHtml}<a class="citation-source-link" href="${escHtml(c.source_url)}" target="_blank" rel="noopener">${c.source_type.toUpperCase()} #${c.source_id} ↗</a></div><div class="citation-claim">${escHtml(c.text)}</div>${quoteHtml}</div>`;
+        }
+
+        function escHtml(t) { const d = document.createElement('div'); d.textContent = t||''; return d.innerHTML; }
+        function renderMarkdownLinks(t) { return escHtml(t).replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>'); }
+    </script>
+</body>
+</html>

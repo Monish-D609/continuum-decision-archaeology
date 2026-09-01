@@ -111,6 +111,15 @@ class Citation(BaseModel):
     source_type: str = Field(description="pr, issue, or commit")
     source_id: str = Field(description="PR/issue number or commit SHA")
     confidence: ConfidenceLevel = Field(description="Confidence level of this claim")
+    author: Optional[str] = Field(default=None, description="GitHub username who made this statement")
+    quote: Optional[str] = Field(default=None, description="Short verbatim or near-verbatim quote")
+
+
+class ConfidenceBreakdown(BaseModel):
+    """Count of citations at each confidence level."""
+    confirmed: int = Field(default=0)
+    inferred: int = Field(default=0)
+    unknown: int = Field(default=0)
 
 
 class QueryResponse(BaseModel):
@@ -122,6 +131,10 @@ class QueryResponse(BaseModel):
     )
     confidence_summary: str = Field(
         description="Overall assessment: strong evidence, partial evidence, or insufficient evidence"
+    )
+    confidence_breakdown: ConfidenceBreakdown = Field(
+        default_factory=ConfidenceBreakdown,
+        description="Per-claim breakdown of confirmed / inferred / unknown citations",
     )
     decision_records_used: list[str] = Field(
         default_factory=list,

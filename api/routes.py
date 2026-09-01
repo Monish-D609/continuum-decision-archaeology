@@ -2,6 +2,18 @@
 API route definitions for Continuum.
 
 These endpoints form the stable contract the frontend consumes.
+
+Endpoints:
+  POST /api/query          — Main query (hybrid retrieval + synthesis)
+  POST /api/graveyard      — Rejected alternatives only ("The Graveyard")
+  POST /api/blame          — Blame-to-Why (explain a code snippet)
+  POST /api/deja-vu        — Déjà Vu PR sentinel (check PR for rejected patterns)
+  POST /api/export-adr     — Export a response as an ADR markdown file
+  POST /api/drift-radar    — Architectural drift/contradiction detector
+  GET  /api/timeline       — Chronological decision timeline for a query
+  GET  /api/decisions      — List all indexed decision records
+  GET  /api/decisions/{id} — Get a specific decision record
+  GET  /api/health         — Health check
 """
 
 from __future__ import annotations
@@ -10,6 +22,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import PlainTextResponse
 
 from api.schemas import (
     QueryRequest,
@@ -17,15 +30,51 @@ from api.schemas import (
     DecisionRecordResponse,
     DecisionListResponse,
     HealthResponse,
+    DejaVuRequest,
+    DejaVuResponse,
+    DejaVuMatch,
+    BlameRequest,
+    BlameResponse,
+    ADRExportRequest,
+    ADRExportResponse,
+    GraveyardRequest,
+    DriftRadarRequest,
+    DriftRadarResponse,
+    DriftViolation,
+    TimelineResponse,
+    TimelineEvent,
+    ConfidenceBreakdown,
 )
 from continuum.retrieval import hybrid_retrieve
 from continuum.synthesis import synthesize_answer
-from continuum.vector_store import get_all_records, get_record_by_id, get_record_count
+from continuum.vector_store import (
+    get_all_records,
+    get_record_by_id,
+    get_record_count,
+    get_timeline,
+    get_rejected_records,
+    semantic_search,
+)
+from continuum.embeddings import embed_text
+from continuum.adr_generator import generate_adr
+from continuum.drift_radar import detect_drift
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def _build_confidence_breakdown(citations: list[dict]) -> ConfidenceBreakdown:
+    from collections import Counter
+    counts = Counter(c.get("confidence", "unknown") for c in citations)
+    return ConfidenceBreakdown(
+        confirmed=counts.get("confirmed", 0),
+        inferred=counts.get("inferred", 0),
+        unknown=counts.get("unknown", 0),
+    )
+
+
+# ── Health ────────────────────────────────────────────────────────────────────
 
 @router.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check():
@@ -45,6 +94,8 @@ async def health_check():
         )
 
 
+# ── Main Query ────────────────────────────────────────────────────────────────
+
 @router.post("/query", response_model=QueryResponse, tags=["Query"])
 async def query_decisions(request: QueryRequest):
     """
@@ -60,13 +111,14 @@ async def query_decisions(request: QueryRequest):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
-    logger.info(f"Query: {request.question}")
+    logger.info(f"Query: {request.question!r} [repo={request.repo}]")
 
-    # Hybrid retrieval
+    # Hybrid retrieval (with optional repo filter)
     retrieved = hybrid_retrieve(
         query=request.question,
         bm25_index=bm25_index,
         final_top_k=5,
+        repo_filter=request.repo,
     )
 
     # Evidence-grounded synthesis
@@ -81,22 +133,335 @@ async def query_decisions(request: QueryRequest):
                 "source_type": c.source_type,
                 "source_id": c.source_id,
                 "confidence": c.confidence.value,
+                "author": c.author,
+                "quote": c.quote,
             }
             for c in response.citations
         ],
         confidence_summary=response.confidence_summary,
+        confidence_breakdown=response.confidence_breakdown,
         decision_records_used=response.decision_records_used,
         is_insufficient_evidence=response.is_insufficient_evidence,
     )
 
 
+# ── The Graveyard ─────────────────────────────────────────────────────────────
+
+@router.post("/graveyard", response_model=QueryResponse, tags=["Graveyard"])
+async def graveyard_search(request: GraveyardRequest):
+    """
+    Search specifically for rejected alternatives — 'The Graveyard'.
+
+    Returns only decision records where alternatives were explicitly marked
+    as rejected, surfacing the institutional knowledge of what NOT to do.
+    """
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+
+    logger.info(f"Graveyard query: {request.question!r} [repo={request.repo}]")
+
+    query_embedding = embed_text(request.question)
+    records = get_rejected_records(
+        query_embedding=query_embedding,
+        top_k=8,
+        repo_filter=request.repo,
+    )
+
+    if not records:
+        return QueryResponse(
+            answer=(
+                "⚰️ **The Graveyard is empty for this query.** "
+                "No decisions were found in the indexed history where alternatives were "
+                "explicitly rejected related to this topic. Either the approaches were "
+                "never formally evaluated, or the discussions weren't captured in PRs/issues."
+            ),
+            citations=[],
+            confidence_summary="insufficient_evidence",
+            confidence_breakdown=ConfidenceBreakdown(),
+            decision_records_used=[],
+            is_insufficient_evidence=True,
+        )
+
+    # Synthesize with a graveyard-specific prompt context
+    graveyard_question = (
+        f"Focus ONLY on what was TRIED and REJECTED. "
+        f"Surface the anti-patterns and failed experiments. "
+        f"Original question: {request.question}"
+    )
+    response = synthesize_answer(graveyard_question, records)
+
+    return QueryResponse(
+        answer=response.answer,
+        citations=[
+            {
+                "text": c.text,
+                "source_url": c.source_url,
+                "source_type": c.source_type,
+                "source_id": c.source_id,
+                "confidence": c.confidence.value,
+                "author": c.author,
+                "quote": c.quote,
+            }
+            for c in response.citations
+        ],
+        confidence_summary=response.confidence_summary,
+        confidence_breakdown=response.confidence_breakdown,
+        decision_records_used=response.decision_records_used,
+        is_insufficient_evidence=response.is_insufficient_evidence,
+    )
+
+
+# ── Blame-to-Why ──────────────────────────────────────────────────────────────
+
+@router.post("/blame", response_model=BlameResponse, tags=["Blame"])
+async def blame_to_why(request: BlameRequest):
+    """
+    Blame-to-Why — explain WHY a code snippet exists using historical PR/issue evidence.
+
+    Unlike `git blame` which shows WHO and WHEN, this endpoint recovers the
+    architectural reasoning, tradeoffs, and debates that led to the code.
+    """
+    from api.main import bm25_index
+
+    # Build a natural-language question from the code snippet
+    file_ctx = f" in `{request.file_path}`" if request.file_path else ""
+    query = (
+        f"Why does this code exist{file_ctx}? "
+        f"What decision led to this implementation?\n\n"
+        f"Code:\n```\n{request.code_snippet[:2000]}\n```"
+    )
+
+    logger.info(f"Blame query for file: {request.file_path}")
+
+    retrieved = hybrid_retrieve(
+        query=query,
+        bm25_index=bm25_index,
+        final_top_k=5,
+        repo_filter=request.repo,
+    )
+
+    response = synthesize_answer(query, retrieved)
+
+    return BlameResponse(
+        answer=response.answer,
+        citations=[
+            {
+                "text": c.text,
+                "source_url": c.source_url,
+                "source_type": c.source_type,
+                "source_id": c.source_id,
+                "confidence": c.confidence.value,
+                "author": c.author,
+                "quote": c.quote,
+            }
+            for c in response.citations
+        ],
+        confidence_summary=response.confidence_summary,
+        confidence_breakdown=response.confidence_breakdown,
+    )
+
+
+# ── Déjà Vu Anti-Pattern Sentinel ─────────────────────────────────────────────
+
+@router.post("/deja-vu", response_model=DejaVuResponse, tags=["DejaVu"])
+async def deja_vu_check(request: DejaVuRequest):
+    """
+    Déjà Vu — check a PR for previously-rejected anti-patterns.
+
+    Given a PR title + description, searches historical decision records
+    for similar approaches that were tried and rejected. Returns a ready-to-post
+    GitHub comment warning developers of the historical precedent.
+    """
+    import json
+
+    query = f"{request.pr_title}\n\n{request.pr_description}".strip()
+    query_embedding = embed_text(query)
+    records = get_rejected_records(
+        query_embedding=query_embedding,
+        top_k=5,
+        repo_filter=request.repo,
+    )
+
+    if not records:
+        return DejaVuResponse(has_matches=False, matches=[], github_comment="")
+
+    # Build matches
+    matches = []
+    for r in records:
+        rec = r.get("record_json", {})
+        if isinstance(rec, str):
+            try:
+                rec = json.loads(rec)
+            except Exception:
+                rec = {}
+
+        # Extract the best rejection reason from alternatives
+        rejection_reason = "Similar approach was previously considered and rejected."
+        alts = rec.get("alternatives_considered", [])
+        for alt in alts:
+            if isinstance(alt, dict) and alt.get("rejected") and alt.get("rejection_reason"):
+                rejection_reason = alt["rejection_reason"]
+                break
+
+        matches.append(DejaVuMatch(
+            decision_id=r.get("id", ""),
+            title=r.get("title", ""),
+            source_url=r.get("source_url", ""),
+            rejection_reason=rejection_reason,
+            similarity_score=r.get("rrf_score", r.get("similarity", 0.0)),
+        ))
+
+    # Build GitHub comment markdown
+    comment_lines = [
+        "## ⚠️ Déjà Vu Warning — Continuum Decision Archaeology",
+        "",
+        "This PR may be proposing an approach that was **previously attempted and rejected** "
+        "in this repository's history. Please review before merging:",
+        "",
+    ]
+    for i, m in enumerate(matches, 1):
+        comment_lines += [
+            f"**{i}. [{m.title}]({m.source_url})**",
+            f"> ❌ Rejection reason: {m.rejection_reason}",
+            "",
+        ]
+    comment_lines += [
+        "---",
+        "_Auto-detected by [Continuum](https://github.com/Monish-D609/continuum-decision-archaeology) — "
+        "the Decision Archaeology agent._",
+    ]
+
+    return DejaVuResponse(
+        has_matches=True,
+        matches=matches,
+        github_comment="\n".join(comment_lines),
+    )
+
+
+# ── ADR Export ─────────────────────────────────────────────────────────────────
+
+@router.post("/export-adr", tags=["ADR"])
+async def export_adr(request: ADRExportRequest):
+    """
+    Export a Continuum query response as a Markdown ADR (Architecture Decision Record).
+
+    Returns the raw Markdown content and a suggested filename.
+    """
+    citations_as_dicts = [c.model_dump() for c in request.citations]
+    filename, content = generate_adr(
+        question=request.question,
+        answer=request.answer,
+        citations=citations_as_dicts,
+        confidence_summary=request.confidence_summary,
+        title=request.title,
+    )
+
+    return ADRExportResponse(filename=filename, content=content)
+
+
+# ── Timeline ──────────────────────────────────────────────────────────────────
+
+@router.get("/timeline", response_model=TimelineResponse, tags=["Timeline"])
+async def decision_timeline(
+    query: str = Query(description="Topic or concept to build the timeline for"),
+    repo: Optional[str] = Query(default=None, description="Optional repo filter (owner/repo)"),
+    top_k: int = Query(default=20, ge=5, le=50),
+):
+    """
+    Temporal Decision Lineage — fetch decisions related to a query,
+    sorted chronologically to show how the architecture evolved over time.
+    """
+    if not query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+    query_embedding = embed_text(query)
+    records = get_timeline(
+        query_embedding=query_embedding,
+        top_k=top_k,
+        repo_filter=repo,
+    )
+
+    events = []
+    for r in records:
+        rec = r.get("record_json", {})
+        if isinstance(rec, str):
+            try:
+                import json
+                rec = json.loads(rec)
+            except Exception:
+                rec = {}
+        decision = rec.get("decision", {})
+        decision_summary = (
+            decision.get("summary", "") if isinstance(decision, dict) else str(decision)
+        )
+        events.append(TimelineEvent(
+            id=r.get("id", ""),
+            title=r.get("title", "Untitled"),
+            decision_summary=decision_summary,
+            source_url=r.get("source_url", ""),
+            source_date=r.get("source_date"),
+            source_type=r.get("source_type", "pr"),
+        ))
+
+    return TimelineResponse(events=events, query=query, total=len(events))
+
+
+# ── Drift Radar ───────────────────────────────────────────────────────────────
+
+@router.post("/drift-radar", response_model=DriftRadarResponse, tags=["DriftRadar"])
+async def drift_radar(request: DriftRadarRequest):
+    """
+    Architectural Drift Radar — detect decisions that contradict a stated principle.
+
+    Given an architectural invariant (e.g. 'All DB writes must go through the event bus'),
+    scans recent decision records and flags contradictions using LLM analysis.
+    """
+    # Get recent records (use semantic search with a broad query)
+    query_embedding = embed_text(request.principle)
+    records = semantic_search(
+        query_embedding=query_embedding,
+        top_k=request.recent_n,
+        repo_filter=request.repo,
+    )
+
+    if not records:
+        return DriftRadarResponse(
+            principle=request.principle,
+            violations=[],
+            clean_count=0,
+            total_scanned=0,
+        )
+
+    violations_raw = detect_drift(request.principle, records)
+    violations = [
+        DriftViolation(
+            decision_id=v.get("decision_id", ""),
+            title=v.get("title", ""),
+            source_url=v.get("source_url", ""),
+            violation_reason=v.get("violation_reason", ""),
+            severity=v.get("severity", "medium"),
+        )
+        for v in violations_raw
+    ]
+
+    return DriftRadarResponse(
+        principle=request.principle,
+        violations=violations,
+        clean_count=len(records) - len(violations),
+        total_scanned=len(records),
+    )
+
+
+# ── Decision Records ──────────────────────────────────────────────────────────
+
 @router.get("/decisions", response_model=DecisionListResponse, tags=["Decisions"])
 async def list_decisions(
     limit: int = Query(default=50, ge=1, le=200, description="Max records to return"),
     offset: int = Query(default=0, ge=0, description="Offset for pagination"),
+    repo: Optional[str] = Query(default=None, description="Filter by repo (owner/repo)"),
 ):
     """List all indexed decision records (paginated)."""
-    all_records = get_all_records()
+    all_records = get_all_records(repo_filter=repo)
     total = len(all_records)
     records = all_records[offset:offset + limit]
 
@@ -107,6 +472,7 @@ async def list_decisions(
                 title=r["title"],
                 decision_summary=r.get("decision_summary", ""),
                 source_url=r.get("source_url", ""),
+                source_date=r.get("source_date"),
             )
             for r in records
         ],
