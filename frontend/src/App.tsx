@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { LoadingScreen } from './components/layout/LoadingScreen';
 import { DecisionChat } from './components/chat/DecisionChat';
 import { BlameInspector } from './components/blame/BlameInspector';
 import { TimelineView } from './components/timeline/TimelineView';
@@ -8,6 +9,7 @@ import { DriftRadarView } from './components/radar/DriftRadarView';
 import { api } from './api/client';
 
 export const App: React.FC = () => {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [activeView, setActiveView] = useState<'chat' | 'blame' | 'timeline' | 'radar'>('chat');
   const [selectedRepo, setSelectedRepo] = useState<string>('');
   const [health, setHealth] = useState<{ status: string; recordCount: number; message: string } | null>(
@@ -48,6 +50,8 @@ export const App: React.FC = () => {
 
   return (
     <div className="font-body-md text-body-md overflow-hidden flex h-screen w-full bg-background">
+      {/* Loading Screen Overlay */}
+      {!isLoaded && <LoadingScreen onComplete={() => setIsLoaded(true)} />}
       {/* Sidebar */}
       <Sidebar
         activeView={activeView}
