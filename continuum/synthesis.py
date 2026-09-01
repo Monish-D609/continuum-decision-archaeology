@@ -203,43 +203,54 @@ def _parse_synthesis_response(raw: str, records: list[dict]) -> QueryResponse:
     """Parse the LLM's JSON response into a QueryResponse."""
     import re
 
-    # Strip any markdown code fences
     cleaned = raw.strip()
-    if cleaned.startswith("```"):
-        lines = cleaned.split("\n")
-        cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-        cleaned = cleaned.strip()
+    parsed = None
 
+    # 1. Try parsing directly
     try:
         parsed = json.loads(cleaned)
     except json.JSONDecodeError:
-        # Try to extract JSON from the response
-        json_match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+        pass
+
+    # 2. Try extracting from ```json ... ``` code fence
+    if not parsed:
+        fence_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw, re.DOTALL)
+        if fence_match:
+            try:
+                parsed = json.loads(fence_match.group(1))
+            except json.JSONDecodeError:
+                pass
+
+    # 3. Try finding any JSON object starting with {"answer" or {"citations"
+    if not parsed:
+        json_match = re.search(r'(\{(?:[^{}]|(?R))*\})', cleaned, re.DOTALL) or re.search(r'(\{.*\})', cleaned, re.DOTALL)
         if json_match:
             try:
-                parsed = json.loads(json_match.group())
+                parsed = json.loads(json_match.group(1))
             except json.JSONDecodeError:
-                # Fallback: treat the whole response as the answer
-                logger.warning("Could not parse synthesis response as JSON, using raw text")
-                return QueryResponse(
-                    answer=raw,
-                    citations=[],
-                    confidence_summary="partial_evidence",
-                    decision_records_used=[
-                        r.get("id", "") for r in records if r.get("id")
-                    ],
-                    is_insufficient_evidence=False,
-                )
-        else:
-            return QueryResponse(
-                answer=raw,
-                citations=[],
-                confidence_summary="partial_evidence",
-                decision_records_used=[
-                    r.get("id", "") for r in records if r.get("id")
-                ],
-                is_insufficient_evidence=False,
-            )
+                # Try from the last '{' to the last '}'
+                first_brace = cleaned.find('{')
+                last_brace = cleaned.rfind('}')
+                if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                    try:
+                        parsed = json.loads(cleaned[first_brace:last_brace + 1])
+                    except json.JSONDecodeError:
+                        pass
+
+    # Fallback if no valid JSON structure could be extracted
+    if not parsed or not isinstance(parsed, dict):
+        logger.warning("Could not parse synthesis response as JSON, using cleaned text as answer")
+        # Strip out duplicate code block if present
+        clean_ans = re.sub(r'```(?:json)?\s*\{.*?\}\s*```', '', raw, flags=re.DOTALL).strip() or raw
+        return QueryResponse(
+            answer=clean_ans,
+            citations=[],
+            confidence_summary="partial_evidence",
+            decision_records_used=[
+                r.get("id", "") for r in records if r.get("id")
+            ],
+            is_insufficient_evidence=False,
+        )
 
     # Build citations
     citations = []
