@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Continuum — Decision Archaeology</title>
+    <meta name="description" content="Recover the WHY behind engineering decisions from GitHub history. Citation-grounded answers from PR and issue discussions.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-brand">
+                <div class="logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="14" cy="14" r="12" stroke="url(#grad)" stroke-width="2.5" fill="none"/>
+                        <path d="M9 14h10M14 9v10" stroke="url(#grad)" stroke-width="2" stroke-linecap="round"/>
+                        <defs>
+                            <linearGradient id="grad" x1="0" y1="0" x2="28" y2="28">
+                                <stop offset="0%" stop-color="#818cf8"/>
+                                <stop offset="100%" stop-color="#c084fc"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h1 class="header-title">Continuum</h1>
+                <span class="header-badge">Decision Archaeology</span>
+            </div>
+            <div class="header-status" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <main class="chat-area" id="chatArea">
+            <!-- Welcome message -->
+            <div class="welcome" id="welcome">
+                <div class="welcome-icon">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="24" cy="24" r="20" stroke="url(#wgrad)" stroke-width="2" fill="none" opacity="0.4"/>
+                        <circle cx="24" cy="24" r="12" stroke="url(#wgrad)" stroke-width="2" fill="none" opacity="0.7"/>
+                        <circle cx="24" cy="24" r="4" fill="url(#wgrad)"/>
+                        <defs>
+                            <linearGradient id="wgrad" x1="4" y1="4" x2="44" y2="44">
+                                <stop offset="0%" stop-color="#818cf8"/>
+                                <stop offset="100%" stop-color="#c084fc"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h2>Ask about past decisions</h2>
+                <p>Continuum recovers the <strong>why</strong> behind engineering decisions from GitHub history — PRs, issues, and commits — with cited evidence you can verify.</p>
+                <div class="example-queries">
+                    <button class="example-query" data-query="Why were React Hooks introduced instead of keeping class components?">
+                        <span class="eq-icon">💡</span>
+                        Why were Hooks introduced?
+                    </button>
+                    <button class="example-query" data-query="Has anyone tried using a different state management approach before?">
+                        <span class="eq-icon">🔍</span>
+                        Prior state management attempts?
+                    </button>
+                    <button class="example-query" data-query="Why was the fiber architecture chosen for React's reconciler?">
+                        <span class="eq-icon">🏗️</span>
+                        Why Fiber architecture?
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages will be appended here -->
+            <div class="messages" id="messages"></div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="input-area">
+            <form class="input-form" id="queryForm">
+                <div class="input-wrapper">
+                    <textarea
+                        id="questionInput"
+                        placeholder="Ask a 'why' question about a past engineering decision..."
+                        rows="1"
+                        maxlength="1000"
+                    ></textarea>
+                    <button type="submit" class="send-btn" id="sendBtn" disabled>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M3 10h14M12 5l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="input-hint">Every answer is grounded in cited PR/issue evidence. When evidence is insufficient, the system says so.</p>
+            </form>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Environment data
+.env
+data/
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+.vercel/
+node_modules/
