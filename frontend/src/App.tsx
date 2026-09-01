@@ -19,6 +19,7 @@ export const App: React.FC = () => {
   // Chat history state
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loadSession, setLoadSession] = useState<ChatSessionDetail | null>(null);
+  const [chatKey, setChatKey] = useState(0); // increment to fully reset DecisionChat
 
   useEffect(() => {
     const fetchHealth = async () => {
@@ -43,6 +44,7 @@ export const App: React.FC = () => {
     setActiveView('chat');
     setPresetQuery(null);
     setLoadSession(null);
+    setChatKey((k) => k + 1); // remount DecisionChat → clears messages + sessionId
   };
 
   const handleSelectPreset = (query: string, mode?: 'query' | 'graveyard') => {
@@ -99,6 +101,7 @@ export const App: React.FC = () => {
         <div className="flex-1 flex flex-col relative overflow-hidden">
           {activeView === 'chat' && (
             <DecisionChat
+              key={chatKey}
               selectedRepo={selectedRepo}
               externalQuery={presetQuery}
               onClearExternalQuery={() => setPresetQuery(null)}
