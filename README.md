@@ -40,8 +40,8 @@ Continuum is live in production with 75 verified decision records indexed from `
 ## 📸 Visual Interface & Walkthrough
 
 <div align="center">
-  <img src="docs/screenshots/hero.png" alt="Continuum Landing Interface" width="900"/>
-  <p><em>1. <strong>Hero & Archaeological Query Interface</strong> — Live decision index status, instant search, and verified benchmark presets.</em></p>
+  <img src="docs/screenshots/hero.png" alt="Continuum Landing Interface & Multi-Repository Switcher" width="900"/>
+  <p><em>1. <strong>Hero, Multi-Repository Switcher & Community Sessions</strong> — Dynamic repository selection (React, FastAPI, Redux, Django, Vue), real-time community chat history, and archaeological query search.</em></p>
 </div>
 
 <br/>
