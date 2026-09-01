@@ -205,7 +205,7 @@ def get_all_records(repo_filter: str = None) -> list[dict]:
     client = _get_client()
     query = (
         client.table("decision_records")
-        .select("id, title, decision_summary, record_json, source_url, text_content, source_type, source_date")
+        .select("id, title, decision_summary, record_json, source_url, text_content, source_type")
     )
     if repo_filter:
         repo_url_prefix = f"https://github.com/{repo_filter}"
@@ -251,18 +251,33 @@ def get_timeline(
     repo_filter: str = None,
 ) -> list[dict]:
     """
-    Fetch decisions relevant to a query, sorted chronologically by source_date.
+    Fetch decisions relevant to a query, sorted chronologically.
     Used by the /api/timeline endpoint.
     """
+    import json as _json
+
     records = semantic_search(
         query_embedding=query_embedding,
         top_k=top_k,
         repo_filter=repo_filter,
     )
-    # Sort by source_date ascending (oldest first), nulls last
-    records.sort(
-        key=lambda r: (r.get("source_date") or "9999-99-99"),
-    )
+
+    def _extract_date(r: dict) -> str:
+        if r.get("source_date"):
+            return r["source_date"]
+        rec = r.get("record_json", {})
+        if isinstance(rec, str):
+            try:
+                rec = _json.loads(rec)
+            except Exception:
+                rec = {}
+        # Try to find a date in source artifacts or created_at
+        for sa in rec.get("source_artifacts", []):
+            if isinstance(sa, dict) and sa.get("created_at"):
+                return sa["created_at"]
+        return "9999-99-99"
+
+    records.sort(key=_extract_date)
     return records
 
 
