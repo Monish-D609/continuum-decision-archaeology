@@ -235,8 +235,8 @@ export const DecisionChat: React.FC<DecisionChatProps> = ({
           </div>
         </div>
       ) : (
-        <div className="flex-1 w-full max-w-[820px] mx-auto flex flex-col relative z-10 px-4 pt-2 overflow-y-auto scrollbar-hide pb-[200px]">
-          <div className="flex flex-col gap-8 w-full">
+        <div className="flex-1 w-full overflow-y-auto scrollbar-hide">
+          <div className="max-w-[820px] mx-auto flex flex-col gap-8 px-4 pt-2 pb-[200px]">
             {messages.map((msg) => (
               <MessageItem key={msg.id} message={msg} onExportADR={handleExportADR} />
             ))}
