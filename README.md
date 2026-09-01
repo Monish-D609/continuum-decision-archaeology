@@ -14,6 +14,7 @@
 
 ## 📑 Table of Contents
 - [🌐 Live Deployment](#-live-deployment)
+- [📸 Visual Interface & Walkthrough](#-visual-interface--walkthrough)
 - [💡 The Problem It Solves](#-the-problem-it-solves)
 - [🌟 Key Features](#-key-features)
 - [🧱 Tech Stack](#-tech-stack)
@@ -33,6 +34,36 @@
 **→ [https://continuumai.up.railway.app](https://continuumai.up.railway.app)**
 
 Continuum is live in production with 75 verified decision records indexed from `facebook/react`. No installation or configuration required — open the link and start investigating architectural decisions.
+
+---
+
+## 📸 Visual Interface & Walkthrough
+
+<div align="center">
+  <img src="docs/screenshots/hero.png" alt="Continuum Landing Interface" width="900"/>
+  <p><em>1. <strong>Hero & Archaeological Query Interface</strong> — Live decision index status, instant search, and verified benchmark presets.</em></p>
+</div>
+
+<br/>
+
+<div align="center">
+  <img src="docs/screenshots/dossier_citations.png" alt="Forensic Archaeological Dossier & Citations" width="900"/>
+  <p><em>2. <strong>Forensic Dossier & Evidence Matrix</strong> — Structured archaeological strata (Context, Decision, Graveyard, Drift) with verifiable GitHub citations.</em></p>
+</div>
+
+<br/>
+
+| 🔍 **Semantic Blame-to-Why** | ⏳ **Temporal Decision Lineage** |
+|:---:|:---:|
+| <img src="docs/screenshots/blame_to_why.png" alt="Blame to Why" width="440"/> | <img src="docs/screenshots/temporal_timeline.png" alt="Temporal Timeline" width="440"/> |
+| *Semantic git blame answering WHY code exists.* | *Chronological 20-event architecture evolution.* |
+
+<br/>
+
+<div align="center">
+  <img src="docs/screenshots/drift_radar.png" alt="Architectural Drift Radar" width="900"/>
+  <p><em>3. <strong>Architectural Drift Radar</strong> — Automated invariant scanner flagging silent violations against architectural rules.</em></p>
+</div>
 
 ---
 
