@@ -3,46 +3,86 @@
 > Recovers the **WHY** behind engineering decisions from GitHub history.  
 > Every answer is citation-grounded with direct PR, issue, and commit links. Zero hallucination.
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-continuumai.up.railway.app-6366f1?logo=railway&logoColor=white)](https://continuumai.up.railway.app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Enabled-818cf8.svg)](https://modelcontextprotocol.io)
+[![Deployed on Railway](https://img.shields.io/badge/Deployed%20on-Railway-0B0D0E?logo=railway)](https://railway.com)
 
 ---
 
-## 🌟 10 Standout Features Implemented
+## 🌐 Live Deployment
 
-Continuum goes far beyond naive RAG over code. It implements 10 purpose-built decision archaeology features designed to preserve institutional knowledge and prevent costly architectural amnesia:
+**→ [https://continuumai.up.railway.app](https://continuumai.up.railway.app)**
 
-| # | Feature | Description | Artifact / Route |
+The app is fully deployed on Railway with 75 decision records indexed from the `facebook/react` repository. No setup required — just open the link and start asking questions.
+
+---
+
+## 🌟 Features
+
+Continuum goes far beyond naive RAG over code. It implements purpose-built decision archaeology features designed to preserve institutional knowledge and prevent costly architectural amnesia:
+
+| # | Feature | Description | Route |
 |:---|:---|:---|:---|
-| **1** | **"Déjà Vu" & Anti-Pattern Sentinel** | A GitHub Action & API that checks opened PRs against historical rejected alternatives and warns developers before merging known anti-patterns. | `.github/workflows/deja_vu_check.yml`<br>`POST /api/deja-vu` |
-| **2** | **Blame-to-Why** | Semantic `git blame` that answers *why* a code snippet exists, surfacing the PR debates and architectural tradeoffs rather than just author and timestamp. | `ui/blame.html`<br>`POST /api/blame` |
-| **3** | **Reverse ADR Generator** | One-click export of any decision query into a standardized [MADR (Markdown Architectural Decision Record)](https://adr.github.io/madr/) ready to commit to `/docs/adr/`. | `continuum/adr_generator.py`<br>`POST /api/export-adr` |
-| **4** | **Native MCP Server** | Model Context Protocol server (`mcp_server.py`) with 6 tools, allowing Cursor, Claude Code, and Copilot to query institutional memory directly in your IDE. | `mcp_server.py` |
-| **5** | **The Graveyard** | Dedicated search mode that exclusively retrieves abandoned prototypes, failed experiments, and rejected RFCs with explicit rejection reasons. | `ui/index.html` (Graveyard Tab)<br>`POST /api/graveyard` |
-| **6** | **Temporal Decision Lineage** | Chronological timeline explorer tracking how decisions evolved over time (Genesis → Modifications → Reversals) grouped by year. | `ui/timeline.html`<br>`GET /api/timeline` |
-| **7** | **Honest Gap Confidence Matrix** | Per-claim verification matrix with visual breakdown bars categorizing evidence into *Confirmed by Author*, *Inferred from Review*, or *Unknown Gap*. | `ui/app.js`<br>`api/schemas.py` |
-| **8** | **Multi-Repository Switcher** | Live repository selector with benchmark presets (React, FastAPI, Redux, Django, Vue) and scoped backend retrieval. | Header Dropdown<br>`repo` query parameter |
-| **9** | **Citation Proof Cards** | Rich expandable cards featuring verbatim quotes, GitHub author avatars, source badges, and deep-link jump buttons. | `ui/app.js`<br>`ui/style.css` |
-| **10** | **Architectural Drift Radar** | Automated invariant checker that scans recent decisions against stated architectural principles and flags silent violations with severity ratings. | `ui/radar.html`<br>`POST /api/drift-radar` |
+| **1** | **Decision Chat** | Ask *why* questions and get structured forensic dossier answers with archaeological strata (Context → Decision → Graveyard → Drift) | `POST /api/query` |
+| **2** | **The Graveyard** | Dedicated search mode that exclusively retrieves abandoned prototypes, failed experiments, and rejected RFCs with explicit rejection reasons | `POST /api/graveyard` |
+| **3** | **Blame-to-Why** | Semantic `git blame` — answers *why* a code snippet exists, surfacing PR debates and architectural tradeoffs | `POST /api/blame` |
+| **4** | **Temporal Timeline** | Chronological timeline explorer tracking how decisions evolved over time (Genesis → Modifications → Reversals) | `GET /api/timeline` |
+| **5** | **Drift Radar** | Automated invariant checker that scans recent decisions against stated architectural principles and flags silent violations | `POST /api/drift-radar` |
+| **6** | **Chat History** | Every conversation is persisted to Supabase. Past sessions appear in the sidebar and can be restored with full message history | `POST /api/sessions` |
+| **7** | **Reverse ADR Generator** | One-click export of any decision into a standardized [MADR](https://adr.github.io/madr/) ready to commit to `/docs/adr/` | `POST /api/export-adr` |
+| **8** | **Déjà Vu Sentinel** | GitHub Action that checks opened PRs against historical rejected alternatives and warns developers before merging known anti-patterns | `POST /api/deja-vu` |
+| **9** | **Native MCP Server** | Model Context Protocol server with 6 tools, allowing Cursor, Claude Code, and Copilot to query institutional memory directly in the IDE | `mcp_server.py` |
+| **10** | **Citation Proof Cards** | Rich expandable cards featuring verbatim quotes, GitHub author avatars, source badges, and deep-link jump buttons | UI only |
 
 ---
 
-## 🚀 Quick Start
+## 🧱 Tech Stack
 
-### 1. Set up environment
+### Backend
+| Layer | Technology |
+|---|---|
+| **API Framework** | FastAPI 0.115+ (Python 3.10+) |
+| **LLM Synthesis** | OpenRouter → Gemma 4 31B / Nemotron 3 (with fallback chain) |
+| **Vector Search** | Supabase pgvector + ivfflat cosine index |
+| **Keyword Search** | Rank-BM25 (sparse lexical matching for developer slang) |
+| **Hybrid Fusion** | Reciprocal Rank Fusion (RRF) over dense + sparse results |
+| **Chat Persistence** | Supabase PostgreSQL (`chat_sessions` + `chat_messages`) |
+| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` |
+| **Deployment** | Railway (Docker, auto-deploy from `main` branch) |
+
+### Frontend
+| Layer | Technology |
+|---|---|
+| **Framework** | React 18 + TypeScript |
+| **Build Tool** | Vite 6 |
+| **Styling** | Tailwind CSS v4 (custom design tokens) |
+| **Icons** | Material Symbols (Google Fonts) |
+| **Fonts** | Inter, Space Mono (Google Fonts) |
+| **State** | React `useState` / `useEffect` (no external store) |
+
+### Infrastructure
+| Component | Technology |
+|---|---|
+| **Database** | Supabase (PostgreSQL + pgvector) |
+| **Hosting** | Railway (containerized, $PORT-aware) |
+| **Container** | Multi-stage Dockerfile (Node build → Python runtime) |
+| **CI/CD** | Git push → Railway auto-deploy |
+
+---
+
+## 🚀 Quick Start (Local)
+
+### 1. Environment setup
 ```bash
-# Create and activate virtual environment
 python -m venv .venv
-.venv\Scripts\activate   # Windows
-# source .venv/bin/activate  # macOS/Linux
-
-# Install dependencies (includes FastAPI, Supabase, sentence-transformers, MCP)
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 ```
 
-### 2. Configure environment variables
-Copy `.env.example` to `.env` and fill in your keys:
+### 2. Configure `.env`
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key
 SUPABASE_URL=https://your-project.supabase.co
@@ -50,120 +90,113 @@ SUPABASE_SERVICE_KEY=your_supabase_service_role_key
 GITHUB_TOKEN=your_github_pat_token
 ```
 
-### 3. Set up Supabase pgvector
-Print and execute the setup SQL schema in your Supabase SQL Editor:
+### 3. Set up Supabase
+Run in your Supabase **SQL Editor**:
 ```bash
+# Print the vector store setup SQL
 python -c "from continuum.vector_store import SETUP_SQL; print(SETUP_SQL)"
 ```
+Then run [`migrations/001_chat_history.sql`](./migrations/001_chat_history.sql) to enable chat persistence.
 
-### 4. Run the Pipeline
+### 4. Index a repository
 ```bash
-# Stage 1: Ingest GitHub PRs, issues, comments
 python scripts/01_ingest.py --repo facebook/react --max-prs 100
-
-# Stage 2: Extract structured decision records
 python scripts/02_extract.py --repo facebook/react
-
-# Stage 3: Embed and index into Supabase pgvector
-python scripts/03_embed_and_index.py --repo facebook/react --test-query "Why were hooks introduced?"
-
-# Stage 4: Test query from terminal
-python scripts/04_query.py --question "Why were React Hooks introduced?"
+python scripts/03_embed_and_index.py --repo facebook/react
 ```
 
-### 5. Start the Application
+### 5. Run the app
 ```bash
+# Backend
 uvicorn api.main:app --reload --port 8000
+
+# Frontend (separate terminal)
+cd frontend && npm install && npm run dev
 ```
-- **Main Chat & Graveyard UI:** http://localhost:8000
-- **Blame-to-Why Page:** http://localhost:8000/static/blame.html
-- **Temporal Timeline Page:** http://localhost:8000/static/timeline.html
-- **Architectural Drift Radar:** http://localhost:8000/static/radar.html
-- **Interactive OpenAPI Documentation:** http://localhost:8000/docs
+
+Open [http://localhost:5173](http://localhost:5173)
 
 ---
 
-## 🔌 IDE Integration (Model Context Protocol)
+## 📡 REST API
 
-Continuum includes a native **MCP Server** (`mcp_server.py`) that exposes 6 decision-archaeology tools directly to AI coding agents (Cursor, Claude Code, Windsurf):
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/query` | Ask *why* questions — hybrid retrieval + cited forensic synthesis |
+| `POST` | `/api/graveyard` | Search rejected alternatives & anti-patterns |
+| `POST` | `/api/blame` | Explain why a code snippet exists |
+| `POST` | `/api/deja-vu` | Check PR against historically rejected patterns |
+| `POST` | `/api/export-adr` | Export response as a Markdown ADR |
+| `POST` | `/api/drift-radar` | Detect architectural principle violations |
+| `GET`  | `/api/timeline` | Chronological decision lineage |
+| `GET`  | `/api/decisions` | List paginated indexed decisions |
+| `GET`  | `/api/health` | Health check + record count |
+| `POST` | `/api/sessions` | Create a new chat session |
+| `GET`  | `/api/sessions` | List recent chat sessions |
+| `GET`  | `/api/sessions/{id}` | Get session + full message history |
+| `DELETE` | `/api/sessions/{id}` | Delete a session |
 
-### MCP Tools Included:
-1. `query_decisions(question, repo)` — Ask why decisions were made with full citations
-2. `check_graveyard(question, repo)` — Search rejected alternatives before coding
-3. `blame_to_why(code_snippet, file_path, repo)` — Explain historical intent behind code
-4. `check_deja_vu(pr_title, pr_description, repo)` — Check if a proposal was previously rejected
-5. `detect_drift(principle, repo, recent_n)` — Check if changes violate architectural rules
-6. `get_decision_timeline(query, repo, top_k)` — Get chronological evolution of a module
+---
 
-### Connect to Cursor / Claude Code:
-Add to your `mcpServers` configuration (`claude_desktop_config.json` or Cursor Settings):
+## 🔌 MCP Server (IDE Integration)
+
+Continuum includes a native **MCP Server** that exposes 6 tools to AI coding agents (Cursor, Claude Code, Windsurf):
+
 ```json
 {
   "mcpServers": {
     "continuum": {
       "command": "python",
-      "args": ["/path/to/continuum/mcp_server.py"],
-      "env": {
-        "CONTINUUM_API_URL": "http://localhost:8000"
-      }
+      "args": ["/path/to/mcp_server.py"],
+      "env": { "CONTINUUM_API_URL": "http://localhost:8000" }
     }
   }
 }
 ```
 
----
-
-## 🤖 GitHub Action: Déjà Vu PR Sentinel
-
-Automate architectural regression checks on every Pull Request by adding `.github/workflows/deja_vu_check.yml` to your repository:
-```yaml
-name: "Continuum — Déjà Vu Anti-Pattern Check"
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-```
-Whenever a developer proposes an approach that was previously benchmarked and discarded, Continuum automatically posts a review comment citing the original historical discussion and rejection reason.
+**Tools:** `query_decisions`, `check_graveyard`, `blame_to_why`, `check_deja_vu`, `detect_drift`, `get_decision_timeline`
 
 ---
 
-## 📡 REST API Summary
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/query` | Ask 'why' questions with hybrid retrieval & cited synthesis |
-| `POST` | `/api/graveyard` | Search explicitly for rejected alternatives & anti-patterns |
-| `POST` | `/api/blame` | Explain why a code snippet exists using PR/issue evidence |
-| `POST` | `/api/deja-vu` | Check PR title/body against historical rejected approaches |
-| `POST` | `/api/export-adr` | Export decision responses as downloadable Markdown ADRs |
-| `POST` | `/api/drift-radar` | Detect violations of architectural principles |
-| `GET` | `/api/timeline` | Get chronological decision lineage for a topic |
-| `GET` | `/api/decisions` | List paginated indexed decision records |
-| `GET` | `/api/health` | Service health status and indexed record count |
-
----
-
-## 🧱 Architecture & Tech Stack
+## 🏗️ Architecture
 
 ```
 GitHub API (PRs, Issues, Commits)
    │
    ▼
-[Inference Chunking by Decision Unit]
+[Decision Extraction — LLM structured JSON]
    │
-   ├──> [Dense Embeddings: sentence-transformers/all-MiniLM-L6-v2] ──> [Supabase pgvector]
-   └──> [Sparse Tokenization] ────────────────────────────────────> [In-Memory BM25]
-                                                                            │
-   ┌────────────────────────────────────────────────────────────────────────┘
+   ├──> [Dense Embeddings: all-MiniLM-L6-v2] ──> [Supabase pgvector]
+   └──> [Sparse BM25 tokenization] ──────────> [In-Memory BM25 index]
+                                                        │
+   ┌────────────────────────────────────────────────────┘
    ▼
-[Reciprocal Rank Fusion (RRF)] ──> [Evidence-Grounded Synthesis] ──> [Cited Output]
-                                                                           │
-   ├──> UI (Chat, Graveyard, Blame, Timeline, Drift Radar) <───────────────┤
-   ├──> MCP Server (Cursor / Claude Code / Windsurf) <─────────────────────┤
-   └──> GitHub Action (Déjà Vu Sentinel PR Bot) <──────────────────────────┘
+[Reciprocal Rank Fusion (RRF)]
+   │
+   ▼
+[Evidence-Grounded Synthesis → Forensic Dossier (4 strata)]
+   │
+   ├──> React + TypeScript UI (Chat · Graveyard · Blame · Timeline · Drift Radar)
+   ├──> Chat sessions persisted to Supabase PostgreSQL
+   ├──> MCP Server (Cursor / Claude Code / Windsurf)
+   └──> GitHub Action (Déjà Vu Sentinel PR Bot)
 ```
 
-- **Backend:** FastAPI, Python 3.10+
-- **LLM Synthesis:** OpenRouter (Gemma 4 31B, Nemotron 3) with strict JSON grounding & fallback
-- **Vector Search:** Supabase pgvector + ivfflat cosine index
-- **Keyword Search:** Rank-BM25 (sparse lexical matching for developer slang)
-- **Frontend:** Responsive vanilla HTML5, modern CSS3 glassmorphism, ES6 JavaScript
+---
+
+## 📝 Notable Changes (Recent)
+
+| Change | Description |
+|---|---|
+| **Chat History** | All conversations are now persisted to Supabase. The sidebar shows a *Recent Sessions* panel — click any session to restore it, hover to delete. |
+| **Forensic Dossier Format** | Every answer is structured as an archaeological excavation with 4 strata: 🏛️ Context, 📜 Decision & Rationale, ⚰️ Graveyard, 🧬 Drift. |
+| **Robust Markdown Renderer** | Handles `*italic*`, `***bold-italic***`, `[CONFIRMED]`/`[INFERRED]` tags, mixed bullet/paragraph blocks, and strips LLM instruction echoes and dangling JSON. |
+| **Railway Deployment** | Deployed via multi-stage Dockerfile. Auto-deploys on every push to `main`. Live at [continuumai.up.railway.app](https://continuumai.up.railway.app). |
+| **Loading Screen** | Thematic boot sequence on app load with animated terminal-style progress indicators. |
+| **High-Contrast Citations** | "View Source" buttons and inline citation links rendered as luminous badge chips instead of faded text. |
+
+---
+
+## License
+
+MIT © 2025 — Built as part of the Tribal Loss / Continuum project.
