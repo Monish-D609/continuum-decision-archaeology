@@ -101,13 +101,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Recent Sessions */}
         <div>
-          <button
+        <button
             onClick={() => setHistoryOpen((o) => !o)}
             className="w-full px-3 mb-2 flex items-center justify-between group cursor-pointer"
           >
-            <span className="font-label-caps text-on-surface-variant/70 uppercase tracking-wider text-[11px]">
-              Recent Sessions
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[13px] text-on-surface-variant/60">public</span>
+              <span className="font-label-caps text-on-surface-variant/70 uppercase tracking-wider text-[11px]">
+                Community Sessions
+              </span>
+            </div>
             <span
               className={`material-symbols-outlined text-[14px] text-on-surface-variant/50 transition-transform ${historyOpen ? '' : '-rotate-90'}`}
             >
@@ -119,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex flex-col gap-0.5">
               {sessions.length === 0 && (
                 <p className="px-3 py-2 text-[12px] text-on-surface-variant/50 italic">
-                  No sessions yet. Start a chat!
+                  No sessions yet — start a query!
                 </p>
               )}
               {sessions.slice(0, 20).map((s) => (
