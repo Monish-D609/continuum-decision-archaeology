@@ -11,3 +11,15 @@ build/
 node_modules/
 frontend/node_modules/
 
+# Deployment helper / scratch scripts (may contain secrets)
+railway_deploy.py
+redeploy.py
+poll_railway.py
+add_cf_vars.py
+check_domain.py
+check_runtime_logs.py
+check_service_settings.py
+fix_start_command.py
+get_railway_logs.py
+test_query_live.py
+test_query_live2.py
