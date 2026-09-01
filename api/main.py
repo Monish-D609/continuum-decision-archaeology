@@ -72,6 +72,17 @@ app.include_router(router, prefix="/api")
 # Serve frontend single-page application (React SPA dist or fallback to ui/)
 frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 ui_dir = Path(__file__).resolve().parent.parent / "ui"
+public_dir = Path(__file__).resolve().parent.parent / "frontend" / "public"
+
+
+@app.get("/logo.png")
+async def serve_logo():
+    """Serve the application logo."""
+    for candidate in [frontend_dist / "logo.png", public_dir / "logo.png", ui_dir / "logo.png"]:
+        if candidate.exists():
+            return FileResponse(str(candidate), media_type="image/png")
+    return FileResponse(status_code=404)
+
 
 if frontend_dist.exists():
     # Mount Vite compiled assets

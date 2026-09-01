@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { ChatSession } from '../../types/api';
+import { LOGO_DATA_URI } from '../../assets/logo';
 
 interface SidebarProps {
   activeView: 'chat' | 'blame' | 'timeline' | 'radar';
@@ -42,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand */}
       <div className="px-6 py-5 flex items-center gap-3">
         <img
-          src="/logo.png"
+          src={LOGO_DATA_URI}
           alt="Continuum logo"
           className="w-7 h-7 object-contain"
         />

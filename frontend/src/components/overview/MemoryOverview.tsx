@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../../api/client';
 import type { StatsResponse } from '../../types/api';
+import { LOGO_DATA_URI } from '../../assets/logo';
 
 const QUICK_CHIPS = [
   { label: '💡 Why Hooks?', q: 'Why were React Hooks introduced instead of keeping class components?', mode: 'query' as const },
@@ -79,7 +80,7 @@ export const MemoryOverview: React.FC<MemoryOverviewProps> = ({
         <div className="flex flex-col gap-3 text-center items-center">
           {/* Brand pill */}
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit">
-            <img src="/logo.png" alt="logo" className="w-4 h-4 object-contain" />
+            <img src={LOGO_DATA_URI} alt="logo" className="w-4 h-4 object-contain" />
             <span className="font-label-caps text-primary text-[11px] uppercase tracking-widest">
               Continuum · Decision Archaeology
             </span>
