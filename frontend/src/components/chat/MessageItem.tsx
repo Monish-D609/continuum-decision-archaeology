@@ -18,49 +18,107 @@ interface MessageItemProps {
 }
 
 function renderFormattedText(text: string): React.ReactNode {
-  // Simple markdown renderer for bold, code, and links
-  const lines = text.split('\n');
-  return lines.map((line, lineIdx) => {
-    // Check for bold **text**
-    const parts = line.split(/(\*\*.*?\*\*|`.*?`|\[.*?\]\(.*?\))/g);
+  const paragraphs = text.split(/\n{2,}/);
+
+  return paragraphs.map((block, blockIdx) => {
+    const trimmed = block.trim();
+    if (!trimmed) return null;
+
+    // H2 header
+    if (trimmed.startsWith('## ')) {
+      return (
+        <h3 key={blockIdx} className="font-headline-sm text-on-surface font-semibold mt-4 mb-2 text-[17px]">
+          {trimmed.slice(3)}
+        </h3>
+      );
+    }
+    // H3 header
+    if (trimmed.startsWith('### ')) {
+      return (
+        <h4 key={blockIdx} className="font-body-md text-primary font-semibold mt-3 mb-1.5 text-[15px]">
+          {trimmed.slice(4)}
+        </h4>
+      );
+    }
+
+    // Bullet list block
+    const bulletLines = trimmed.split('\n').filter(l => l.trim().startsWith('- ') || l.trim().startsWith('* '));
+    const allLines = trimmed.split('\n');
+    const allBullets = allLines.every(l => l.trim() === '' || l.trim().startsWith('- ') || l.trim().startsWith('* '));
+    if (allBullets && bulletLines.length > 0) {
+      return (
+        <ul key={blockIdx} className="list-none flex flex-col gap-2 my-2 pl-2">
+          {bulletLines.map((line, i) => (
+            <li key={i} className="flex gap-2 items-start">
+              <span className="text-primary mt-1 shrink-0">▸</span>
+              <span className="font-body-md text-on-surface leading-relaxed">{renderInline(line.replace(/^[-*]\s+/, ''))}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    // Numbered list block
+    const numberedLines = allLines.filter(l => /^\d+\.\s/.test(l.trim()));
+    const allNumbered = allLines.every(l => l.trim() === '' || /^\d+\.\s/.test(l.trim()));
+    if (allNumbered && numberedLines.length > 0) {
+      return (
+        <ol key={blockIdx} className="flex flex-col gap-2 my-2 pl-2">
+          {numberedLines.map((line, i) => (
+            <li key={i} className="flex gap-2 items-start">
+              <span className="text-primary font-code-sm font-medium shrink-0">{i + 1}.</span>
+              <span className="font-body-md text-on-surface leading-relaxed">{renderInline(line.replace(/^\d+\.\s+/, ''))}</span>
+            </li>
+          ))}
+        </ol>
+      );
+    }
+
+    // Regular paragraph (with inline rendering)
     return (
-      <p key={lineIdx} className="mb-2 last:mb-0">
-        {parts.map((part, partIdx) => {
-          if (part.startsWith('**') && part.endsWith('**')) {
-            return (
-              <strong key={partIdx} className="text-on-surface font-semibold">
-                {part.slice(2, -2)}
-              </strong>
-            );
-          }
-          if (part.startsWith('`') && part.endsWith('`')) {
-            return (
-              <code
-                key={partIdx}
-                className="font-code-sm bg-surface-container-highest px-1.5 py-0.5 rounded text-primary text-[12px]"
-              >
-                {part.slice(1, -1)}
-              </code>
-            );
-          }
-          const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
-          if (linkMatch) {
-            return (
-              <a
-                key={partIdx}
-                href={linkMatch[2]}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline underline-offset-2 hover:text-primary-fixed"
-              >
-                {linkMatch[1]}
-              </a>
-            );
-          }
-          return part;
-        })}
+      <p key={blockIdx} className="font-body-lg text-on-surface leading-relaxed mb-0">
+        {renderInline(trimmed.replace(/\n/g, ' '))}
       </p>
     );
+  });
+}
+
+function renderInline(text: string): React.ReactNode {
+  // Split on bold **text**, inline code `text`, and [label](url) links
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g);
+  return parts.map((part, partIdx) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={partIdx} className="text-on-surface font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code
+          key={partIdx}
+          className="font-code-sm bg-surface-container-highest px-1.5 py-0.5 rounded text-primary text-[12px]"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (linkMatch) {
+      return (
+        <a
+          key={partIdx}
+          href={linkMatch[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline underline-offset-2 hover:text-primary-fixed transition-colors"
+        >
+          {linkMatch[1]}
+        </a>
+      );
+    }
+    return part;
   });
 }
 
