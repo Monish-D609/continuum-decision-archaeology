@@ -124,6 +124,12 @@ async def query_decisions(request: QueryRequest):
     # Evidence-grounded synthesis
     response = synthesize_answer(request.question, retrieved)
 
+    cb = (
+        response.confidence_breakdown.model_dump()
+        if hasattr(response.confidence_breakdown, "model_dump")
+        else response.confidence_breakdown
+    )
+
     return QueryResponse(
         answer=response.answer,
         citations=[
@@ -139,7 +145,7 @@ async def query_decisions(request: QueryRequest):
             for c in response.citations
         ],
         confidence_summary=response.confidence_summary,
-        confidence_breakdown=response.confidence_breakdown,
+        confidence_breakdown=cb,
         decision_records_used=response.decision_records_used,
         is_insufficient_evidence=response.is_insufficient_evidence,
     )
@@ -177,7 +183,7 @@ async def graveyard_search(request: GraveyardRequest):
             ),
             citations=[],
             confidence_summary="insufficient_evidence",
-            confidence_breakdown=ConfidenceBreakdown(),
+            confidence_breakdown={"confirmed": 0, "inferred": 0, "unknown": 0},
             decision_records_used=[],
             is_insufficient_evidence=True,
         )
@@ -189,6 +195,12 @@ async def graveyard_search(request: GraveyardRequest):
         f"Original question: {request.question}"
     )
     response = synthesize_answer(graveyard_question, records)
+
+    cb = (
+        response.confidence_breakdown.model_dump()
+        if hasattr(response.confidence_breakdown, "model_dump")
+        else response.confidence_breakdown
+    )
 
     return QueryResponse(
         answer=response.answer,
@@ -205,7 +217,7 @@ async def graveyard_search(request: GraveyardRequest):
             for c in response.citations
         ],
         confidence_summary=response.confidence_summary,
-        confidence_breakdown=response.confidence_breakdown,
+        confidence_breakdown=cb,
         decision_records_used=response.decision_records_used,
         is_insufficient_evidence=response.is_insufficient_evidence,
     )
@@ -242,6 +254,12 @@ async def blame_to_why(request: BlameRequest):
 
     response = synthesize_answer(query, retrieved)
 
+    cb = (
+        response.confidence_breakdown.model_dump()
+        if hasattr(response.confidence_breakdown, "model_dump")
+        else response.confidence_breakdown
+    )
+
     return BlameResponse(
         answer=response.answer,
         citations=[
@@ -257,7 +275,7 @@ async def blame_to_why(request: BlameRequest):
             for c in response.citations
         ],
         confidence_summary=response.confidence_summary,
-        confidence_breakdown=response.confidence_breakdown,
+        confidence_breakdown=cb,
     )
 
 

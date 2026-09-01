@@ -1,4 +1,12 @@
-# Multi-stage Dockerfile for Continuum Decision Archaeology Agent
+# Stage 1: Build React TypeScript Frontend
+FROM node:20-slim AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Production Python Backend Container
 FROM python:3.11-slim
 
 # Set environment variables
@@ -27,6 +35,9 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 
 # Copy application source code
 COPY . .
+
+# Copy compiled React frontend from builder stage
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
 # Expose target port
 EXPOSE 8000

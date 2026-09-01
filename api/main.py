@@ -69,9 +69,28 @@ app.add_middleware(
 from api.routes import router
 app.include_router(router, prefix="/api")
 
-# Serve the demo UI as static files
+# Serve frontend single-page application (React SPA dist or fallback to ui/)
+frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 ui_dir = Path(__file__).resolve().parent.parent / "ui"
-if ui_dir.exists():
+
+if frontend_dist.exists():
+    # Mount Vite compiled assets
+    assets_dir = frontend_dist / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    if ui_dir.exists():
+        app.mount("/static", StaticFiles(directory=str(ui_dir)), name="static")
+
+    @app.get("/")
+    @app.get("/blame")
+    @app.get("/timeline")
+    @app.get("/radar")
+    async def serve_react_app():
+        """Serve the React Single Page Application."""
+        return FileResponse(str(frontend_dist / "index.html"))
+
+elif ui_dir.exists():
     app.mount("/static", StaticFiles(directory=str(ui_dir)), name="static")
 
     @app.get("/")
