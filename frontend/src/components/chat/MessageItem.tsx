@@ -17,22 +17,47 @@ interface MessageItemProps {
   onExportADR: (question: string, answer: string, citations: Citation[], confidence: string) => void;
 }
 
-// Strip LLM instruction echoes and JSON code blocks from answers before rendering
+// Strip LLM instruction echoes, JSON code blocks, and Citations: sections from answers before rendering
 function cleanAnswer(raw: string): string {
-  // Remove JSON code blocks the LLM appended
+  // 1. Remove JSON/code fences the LLM appended
   let text = raw.replace(/```(?:json)?[\s\S]*?```/gi, '');
-  // Remove sections the LLM echos from the prompt (everything from ## Strict to end)
-  const stripHeadings = ['## strict', '## response format', '## response', 'output valid json'];
+
+  // 2. Cut at any instruction-echo or Citations heading (everything from that line onward)
+  const cutTriggers = [
+    '## strict',
+    '## response format',
+    '## response',
+    'output valid json',
+    'citations:',       // LLM echoes citations as a markdown section
+    '## citations',
+    '### citations',
+    '**citations**',
+  ];
   const lines = text.split('\n');
   let cutIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     const lower = lines[i].toLowerCase().trim();
-    if (stripHeadings.some(h => lower.startsWith(h))) {
+    if (cutTriggers.some(h => lower === h || lower.startsWith(h + ' ') || lower.startsWith(h + '\n'))) {
       cutIdx = i;
       break;
     }
   }
   if (cutIdx !== -1) text = lines.slice(0, cutIdx).join('\n');
+
+  // 3. Strip any remaining bullet lines that are raw JSON objects
+  //    e.g.  - { "text": "...", "source_url": "..." }
+  text = text
+    .split('\n')
+    .filter(line => {
+      const t = line.trim();
+      // drop lines that look like JSON object bullets
+      return !(
+        (t.startsWith('- {') || t.startsWith('* {') || t.startsWith('{ "')) &&
+        (t.includes('"text"') || t.includes('"source_url"') || t.includes('"confidence"'))
+      );
+    })
+    .join('\n');
+
   return text.trim();
 }
 

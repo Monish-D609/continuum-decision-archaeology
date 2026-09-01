@@ -248,8 +248,11 @@ def _extract_prose_before_json(raw: str) -> str:
 
     if fence_idx > 80:
         prose = raw[:fence_idx].strip()
-        # Strip trailing instruction echoes
-        for stop_phrase in ['## Strict', '## Response Format', '## Response', 'Output valid JSON']:
+        # Strip trailing instruction echoes AND citations section
+        for stop_phrase in [
+            '## Strict', '## Response Format', '## Response',
+            'Output valid JSON', 'Citations:', '## Citations', '### Citations',
+        ]:
             idx = prose.lower().find(stop_phrase.lower())
             if idx != -1:
                 prose = prose[:idx].strip()
@@ -257,6 +260,32 @@ def _extract_prose_before_json(raw: str) -> str:
 
     # Fallback: strip any JSON fences from the full text
     return re.sub(r'```(?:json)?\s*\{[\s\S]*?\}\s*```', '', raw, flags=re.DOTALL).strip()
+
+
+def _strip_answer_citations(answer: str) -> str:
+    """
+    Remove any 'Citations:' section the LLM embedded inside the answer string,
+    and strip bullet lines that are raw JSON citation objects.
+    """
+    import re
+    # Cut at Citations: heading (case-insensitive)
+    for trigger in ['citations:', '## citations', '### citations', '**citations**']:
+        idx = answer.lower().find(trigger)
+        if idx != -1:
+            answer = answer[:idx].strip()
+            break
+
+    # Strip bullet lines that are raw JSON objects
+    cleaned_lines = []
+    for line in answer.split('\n'):
+        t = line.strip()
+        is_json_bullet = (
+            (t.startswith('- {') or t.startswith('* {') or t.startswith('{ "'))
+            and any(k in t for k in ('"text"', '"source_url"', '"confidence"', '"source_type"'))
+        )
+        if not is_json_bullet:
+            cleaned_lines.append(line)
+    return '\n'.join(cleaned_lines).strip()
 
 
 def _parse_synthesis_response(raw: str, records: list[dict]) -> QueryResponse:
@@ -310,6 +339,7 @@ def _parse_synthesis_response(raw: str, records: list[dict]) -> QueryResponse:
         prose = _extract_prose_before_json(raw)
         if not prose:
             prose = raw.strip()
+        prose = _strip_answer_citations(prose)
         return QueryResponse(
             answer=prose,
             citations=[],
@@ -344,7 +374,7 @@ def _parse_synthesis_response(raw: str, records: list[dict]) -> QueryResponse:
     )
 
     return QueryResponse(
-        answer=parsed.get("answer", raw),
+        answer=_strip_answer_citations(parsed.get("answer", raw)),
         citations=citations,
         confidence_summary=parsed.get("confidence_summary", "partial_evidence"),
         confidence_breakdown=breakdown,
