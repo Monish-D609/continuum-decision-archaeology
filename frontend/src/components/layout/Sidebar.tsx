@@ -41,12 +41,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <nav className="hidden md:flex flex-col h-screen fixed left-0 top-0 w-64 bg-surface-container-lowest border-r border-outline-variant z-40">
       {/* Brand */}
       <div className="px-6 py-5 flex items-center gap-3">
-        <span
-          className="material-symbols-outlined text-primary text-[28px]"
-          style={{ fontVariationSettings: "'FILL' 1" }}
-        >
-          hub
-        </span>
+        <img
+          src="/logo.png"
+          alt="Continuum logo"
+          className="w-7 h-7 object-contain"
+        />
         <div className="flex flex-col">
           <span className="font-headline-sm text-on-surface font-bold leading-tight">Continuum</span>
           <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">

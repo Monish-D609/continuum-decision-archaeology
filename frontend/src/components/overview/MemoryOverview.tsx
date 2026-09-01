@@ -79,12 +79,7 @@ export const MemoryOverview: React.FC<MemoryOverviewProps> = ({
         <div className="flex flex-col gap-3 text-center items-center">
           {/* Brand pill */}
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit">
-            <span
-              className="material-symbols-outlined text-primary text-[14px]"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              hub
-            </span>
+            <img src="/logo.png" alt="logo" className="w-4 h-4 object-contain" />
             <span className="font-label-caps text-primary text-[11px] uppercase tracking-widest">
               Continuum · Decision Archaeology
             </span>
