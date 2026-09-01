@@ -1,150 +1,222 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Decision Timeline — Continuum</title>
-    <meta name="description" content="Visualize how engineering decisions evolved chronologically.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Continuum — Temporal Decision Lineage</title>
+<meta name="description" content="Visualize how engineering decisions evolved chronologically across GitHub history."/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "surface-bright": "#39393e","on-surface-variant": "#c7c5d0","outline": "#91909a",
+          "surface-tint": "#bdc2ff","inferred-amber": "#fbbf24","surface": "#131318","background": "#131318",
+          "error": "#ffb4ab","primary-container": "#bdc2ff","obsidian-deep": "#0a0a0f",
+          "surface-dim": "#131318","surface-container-high": "#2a292f","on-background": "#e4e1e8",
+          "surface-variant": "#35343a","surface-container-low": "#1b1b20",
+          "confirmed-emerald": "#34d399","primary": "#dfe0ff","surface-container": "#1f1f24",
+          "on-surface": "#e4e1e8","surface-container-highest": "#35343a",
+          "secondary": "#ddb8ff","outline-variant": "#46464f","info-sky": "#60a5fa","unknown-rose": "#f87171",
+          "surface-container-lowest": "#0e0e13"
+        },
+        "borderRadius": {"DEFAULT": "0.25rem","lg": "0.5rem","xl": "0.75rem","full": "9999px"},
+        "fontFamily": {
+          "label-caps": ["JetBrains Mono"],"headline-md": ["Playfair Display"],"headline-sm": ["Playfair Display"],
+          "body-lg": ["Hanken Grotesk"],"code-sm": ["JetBrains Mono"],"body-md": ["Hanken Grotesk"]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body { background-color: #131318; color: #e4e1e8; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
 </head>
-<body>
-    <div class="app">
-        <header class="header">
-            <div class="header-brand">
-                <a href="/" class="back-link">← Continuum</a>
-                <h1 class="header-title">Decision Timeline</h1>
-                <span class="header-badge">Temporal Lineage</span>
-            </div>
-            <div class="header-controls">
-                <div class="repo-switcher">
-                    <label for="repoSelect" class="repo-label">Repository</label>
-                    <select id="repoSelect" class="repo-select">
-                        <option value="">All indexed repos</option>
-                        <option value="facebook/react">facebook/react</option>
-                        <option value="tiangolo/fastapi">tiangolo/fastapi</option>
-                        <option value="reduxjs/redux">reduxjs/redux</option>
-                        <option value="django/django">django/django</option>
-                        <option value="vuejs/vue">vuejs/vue</option>
-                    </select>
-                </div>
-            </div>
-        </header>
+<body class="font-body-md text-body-md overflow-hidden flex h-screen w-full bg-background">
 
-        <main class="timeline-main">
-            <div class="blame-intro">
-                <h2>How did this decision evolve?</h2>
-                <p>Enter a topic to see all related architectural decisions sorted chronologically — from the genesis of an idea through its modifications and reversals.</p>
-            </div>
+<!-- Sidebar -->
+<nav class="hidden md:flex flex-col h-screen fixed left-0 top-0 w-64 bg-surface-container-lowest border-r border-outline-variant z-40">
+  <div class="px-6 py-5 flex items-center gap-3">
+    <span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings:'FILL' 1;">hub</span>
+    <div class="flex flex-col">
+      <span class="font-headline-sm text-on-surface font-bold leading-tight">Continuum</span>
+      <span class="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">Decision Archaeology</span>
+    </div>
+  </div>
+  <div class="px-4 mb-6">
+    <a href="/" class="w-full bg-transparent border border-outline-variant hover:bg-surface-container-high text-on-surface transition-colors py-2 px-3 rounded-lg flex items-center gap-2 justify-start font-body-md">
+      <span class="material-symbols-outlined text-[18px]">add</span> New Audit
+    </a>
+  </div>
+  <div class="flex-1 overflow-y-auto scrollbar-hide px-3 flex flex-col gap-6">
+    <div>
+      <div class="px-3 mb-2 font-label-caps text-on-surface-variant/70 uppercase tracking-wider">Tools</div>
+      <div class="flex flex-col gap-1">
+        <a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-lg px-3 py-2 flex items-center gap-3" href="/">
+          <span class="material-symbols-outlined text-[18px]">chat</span>
+          <span class="font-body-md">Decision Chat</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-lg px-3 py-2 flex items-center gap-3" href="/blame">
+          <span class="material-symbols-outlined text-[18px]">manage_search</span>
+          <span class="font-body-md">Blame-to-Why</span>
+        </a>
+        <a class="bg-surface-container-highest text-primary rounded-lg px-3 py-2 flex items-center gap-3 transition-colors font-medium" href="/timeline">
+          <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">history</span>
+          <span class="font-body-md">Temporal Timeline</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-lg px-3 py-2 flex items-center gap-3" href="/radar">
+          <span class="material-symbols-outlined text-[18px]">radar</span>
+          <span class="font-body-md">Drift Radar</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
 
-            <div class="blame-form-card">
-                <form id="timelineForm">
-                    <div class="field-group">
-                        <label for="topicInput">Topic or concept</label>
-                        <input type="text" id="topicInput" class="text-input" placeholder="e.g. 'state management', 'API design', 'authentication'" maxlength="300">
-                    </div>
-                    <button type="submit" id="timelineBtn" class="primary-btn" disabled>
-                        ⏳ Build Timeline
-                    </button>
-                </form>
-            </div>
-
-            <div id="timelineResult" style="display:none">
-                <div class="timeline-header">
-                    <h3 id="timelineTitle"></h3>
-                    <span id="timelineCount" class="header-badge"></span>
-                </div>
-                <div class="timeline-track" id="timelineTrack"></div>
-            </div>
-        </main>
+<!-- Main Area -->
+<main class="flex-1 md:ml-64 h-screen flex flex-col relative bg-background overflow-y-auto p-6 md:p-8">
+  <div class="max-w-4xl mx-auto w-full flex flex-col gap-6 pb-20">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-primary text-[22px]">history</span>
+        <span class="font-label-caps text-[11px] text-primary uppercase tracking-wider">Temporal Lineage</span>
+      </div>
+      <h1 class="font-headline-md text-on-surface mb-2">How Did This Decision Evolve?</h1>
+      <p class="font-body-lg text-on-surface-variant">Trace the genesis, modifications, and reversals of architectural components across historical PRs and issues.</p>
     </div>
 
-    <script>
-        const API_BASE = window.location.origin;
-        const form = document.getElementById('timelineForm');
-        const topicInput = document.getElementById('topicInput');
-        const timelineBtn = document.getElementById('timelineBtn');
-        const timelineResult = document.getElementById('timelineResult');
-        const timelineTitle = document.getElementById('timelineTitle');
-        const timelineCount = document.getElementById('timelineCount');
-        const timelineTrack = document.getElementById('timelineTrack');
-        const repoSelect = document.getElementById('repoSelect');
+    <!-- Search Card -->
+    <div class="bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-xl flex flex-col gap-4">
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex-1 relative">
+          <input type="text" id="topicInput" class="w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-3 font-body-md text-on-surface placeholder-on-surface-variant/40 focus:border-primary/60 outline-none transition-colors" placeholder="Enter topic: e.g. hooks, reconciler, state management, context">
+        </div>
+        <button id="timelineBtn" onclick="submitTimeline()" class="bg-primary text-on-primary font-body-md font-semibold px-6 py-3 rounded-xl hover:bg-primary-fixed transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
+          <span class="material-symbols-outlined text-[18px]">timeline</span>
+          <span>Build Timeline</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-label-caps text-[11px] text-on-surface-variant uppercase">Quick topics:</span>
+        <button onclick="setTopic('hooks')" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface px-3 py-1 rounded-full text-[12px] font-code-sm transition-colors cursor-pointer">React Hooks</button>
+        <button onclick="setTopic('fiber reconciler')" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface px-3 py-1 rounded-full text-[12px] font-code-sm transition-colors cursor-pointer">Fiber Reconciler</button>
+        <button onclick="setTopic('state management')" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface px-3 py-1 rounded-full text-[12px] font-code-sm transition-colors cursor-pointer">State Models</button>
+      </div>
+    </div>
 
-        topicInput.addEventListener('input', () => { timelineBtn.disabled = !topicInput.value.trim(); });
+    <!-- Timeline Results Container -->
+    <div id="timelineContainer" class="hidden flex flex-col gap-8">
+      <div class="flex justify-between items-center border-b border-outline-variant pb-3">
+        <h2 class="font-headline-sm text-on-surface" id="timelineTopicTitle">Timeline</h2>
+        <span class="font-code-sm text-primary text-[12px] bg-surface-container px-3 py-1 rounded-full border border-outline-variant" id="timelineCountBadge">0 events</span>
+      </div>
+      <div id="timelineTrack" class="flex flex-col gap-8 relative before:absolute before:left-[17px] before:top-4 before:bottom-4 before:w-[2px] before:bg-outline-variant"></div>
+    </div>
+  </div>
+</main>
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!topicInput.value.trim()) return;
-            timelineBtn.disabled = true;
-            timelineBtn.textContent = '⏳ Loading...';
-            timelineResult.style.display = 'none';
+<script>
+const API_BASE = window.location.origin;
 
-            const params = new URLSearchParams({ query: topicInput.value, top_k: 20 });
-            if (repoSelect.value) params.set('repo', repoSelect.value);
+function setTopic(t) {
+  document.getElementById('topicInput').value = t;
+  submitTimeline();
+}
 
-            try {
-                const res = await fetch(`${API_BASE}/api/timeline?${params}`);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                renderTimeline(data);
-            } catch (e) {
-                timelineTrack.innerHTML = `<p style="color:var(--error)">⚠️ ${e.message}</p>`;
-                timelineResult.style.display = 'block';
-            } finally {
-                timelineBtn.textContent = '⏳ Build Timeline';
-                timelineBtn.disabled = false;
-            }
-        });
+async function submitTimeline() {
+  const topic = document.getElementById('topicInput').value.trim();
+  if (!topic) return;
 
-        function renderTimeline(data) {
-            timelineTitle.textContent = `Timeline: "${data.query}"`;
-            timelineCount.textContent = `${data.total} events`;
+  const btn = document.getElementById('timelineBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">sync</span><span>Building timeline…</span>';
 
-            if (!data.events || data.events.length === 0) {
-                timelineTrack.innerHTML = '<p class="no-results">No timeline events found for this topic.</p>';
-                timelineResult.style.display = 'block';
-                return;
-            }
+  const container = document.getElementById('timelineContainer');
+  container.classList.add('hidden');
 
-            // Group events by year
-            const byYear = {};
-            data.events.forEach(e => {
-                const year = e.source_date ? e.source_date.substring(0, 4) : 'Unknown';
-                if (!byYear[year]) byYear[year] = [];
-                byYear[year].push(e);
-            });
+  try {
+    const res = await fetch(`${API_BASE}/api/timeline?query=${encodeURIComponent(topic)}&top_k=20`);
+    if (!res.ok) throw new Error((await res.json().catch(() => ({detail:'Timeline error'}))).detail);
+    const data = await res.json();
+    renderTimeline(data);
+  } catch(e) {
+    alert('Timeline fetch failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">timeline</span><span>Build Timeline</span>';
+  }
+}
 
-            let html = '';
-            Object.keys(byYear).sort().forEach(year => {
-                html += `<div class="timeline-year-group">`;
-                html += `<div class="timeline-year-marker">${year}</div>`;
-                html += `<div class="timeline-events">`;
-                byYear[year].forEach((ev, i) => {
-                    const date = ev.source_date ? ev.source_date.substring(0, 10) : '';
-                    const typeIcon = ev.source_type === 'pr' ? '⤴' : ev.source_type === 'issue' ? '●' : '◆';
-                    html += `
-                        <div class="timeline-event">
-                            <div class="timeline-dot ${ev.source_type}"></div>
-                            <div class="timeline-card">
-                                <div class="timeline-card-header">
-                                    <span class="timeline-type">${typeIcon} ${ev.source_type.toUpperCase()}</span>
-                                    ${date ? `<span class="timeline-date">${date}</span>` : ''}
-                                </div>
-                                <a href="${escHtml(ev.source_url)}" target="_blank" rel="noopener" class="timeline-card-title">${escHtml(ev.title)}</a>
-                                <p class="timeline-card-summary">${escHtml(ev.decision_summary || '')}</p>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += `</div></div>`;
-            });
+function renderTimeline(data) {
+  document.getElementById('timelineTopicTitle').textContent = `Evolution: "${data.query}"`;
+  document.getElementById('timelineCountBadge').textContent = `${data.total} historical events`;
 
-            timelineTrack.innerHTML = html;
-            timelineResult.style.display = 'block';
-        }
+  const track = document.getElementById('timelineTrack');
+  track.innerHTML = '';
 
-        function escHtml(t) { const d = document.createElement('div'); d.textContent = t||''; return d.innerHTML; }
-    </script>
+  if (!data.events || data.events.length === 0) {
+    track.innerHTML = '<div class="text-on-surface-variant font-body-md pl-10">No chronological decisions found for this query.</div>';
+    document.getElementById('timelineContainer').classList.remove('hidden');
+    return;
+  }
+
+  // Group events by year
+  const groups = {};
+  data.events.forEach(ev => {
+    const yr = (ev.source_date && ev.source_date.length >= 4) ? ev.source_date.substring(0,4) : 'Historical';
+    if (!groups[yr]) groups[yr] = [];
+    groups[yr].push(ev);
+  });
+
+  Object.keys(groups).sort().forEach(year => {
+    const yearEl = document.createElement('div');
+    yearEl.className = 'flex flex-col gap-4 relative';
+
+    let yearHTML = `
+      <div class="flex items-center gap-3 pl-10">
+        <span class="font-headline-sm text-primary font-bold">${year}</span>
+        <div class="h-[1px] flex-1 bg-outline-variant/60"></div>
+      </div>
+      <div class="flex flex-col gap-4">
+    `;
+
+    groups[year].forEach(ev => {
+      const typeColor = ev.source_type === 'pr' ? 'border-primary bg-primary/20 text-primary' : 'border-info-sky bg-info-sky/20 text-info-sky';
+      const dotColor  = ev.source_type === 'pr' ? 'bg-primary' : 'bg-info-sky';
+      yearHTML += `
+        <div class="flex items-start gap-4 group pl-2">
+          <div class="w-8 h-8 rounded-full ${typeColor} border flex items-center justify-center shrink-0 z-10 bg-background shadow-md">
+            <span class="material-symbols-outlined text-[16px]">${ev.source_type === 'pr' ? 'merge_type' : 'task_alt'}</span>
+          </div>
+          <div class="flex-1 bg-surface-container-low border border-outline-variant rounded-2xl p-5 hover:border-outline transition-colors shadow-lg">
+            <div class="flex justify-between items-start gap-3 mb-2">
+              <span class="font-body-md font-semibold text-on-surface text-[16px]">${esc(ev.title)}</span>
+              <a href="${esc(ev.source_url)}" target="_blank" rel="noopener" class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 font-code-sm text-[12px] whitespace-nowrap">
+                <span>View Source</span><span class="material-symbols-outlined text-[14px]">open_in_new</span>
+              </a>
+            </div>
+            <p class="font-body-md text-on-surface-variant text-[14px] leading-relaxed">${esc(ev.decision_summary || 'Decision logged in source thread.')}</p>
+          </div>
+        </div>
+      `;
+    });
+
+    yearHTML += `</div>`;
+    yearEl.innerHTML = yearHTML;
+    track.appendChild(yearEl);
+  });
+
+  document.getElementById('timelineContainer').classList.remove('hidden');
+}
+
+function esc(t) { const d=document.createElement('div');d.textContent=t||'';return d.innerHTML; }
+</script>
 </body>
 </html>

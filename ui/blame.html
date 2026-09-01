@@ -1,178 +1,281 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blame-to-Why — Continuum</title>
-    <meta name="description" content="Explain WHY any code snippet exists using historical PR and issue evidence.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Continuum — Blame-to-Why</title>
+<meta name="description" content="Explain WHY any code snippet exists using historical PR and issue evidence."/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "surface-bright": "#39393e","on-surface-variant": "#c7c5d0","outline": "#91909a",
+          "on-error-container": "#ffdad6","on-secondary-container": "#ceaaf0","on-primary-fixed": "#101549",
+          "surface-tint": "#bdc2ff","inferred-amber": "#fbbf24","surface": "#131318","background": "#131318",
+          "error": "#ffb4ab","on-primary": "#262b5e","primary-container": "#bdc2ff","obsidian-deep": "#0a0a0f",
+          "surface-dim": "#131318","surface-container-high": "#2a292f","on-background": "#e4e1e8",
+          "tertiary-fixed-dim": "#f7bd3e","surface-variant": "#35343a","surface-container-low": "#1b1b20",
+          "on-tertiary-fixed-variant": "#5d4200","inverse-primary": "#555a90","confirmed-emerald": "#34d399",
+          "primary": "#dfe0ff","primary-fixed-dim": "#bdc2ff","surface-container": "#1f1f24",
+          "primary-fixed": "#dfe0ff","inverse-surface": "#e4e1e8","on-primary-fixed-variant": "#3d4276",
+          "on-surface": "#e4e1e8","on-secondary": "#40215d","surface-container-highest": "#35343a",
+          "on-secondary-fixed-variant": "#573976","tertiary-fixed": "#ffdea4","surface-glass": "rgba(26, 26, 40, 0.7)",
+          "tertiary": "#ffdea3","secondary-container": "#5a3b78","on-primary-container": "#494e83",
+          "secondary": "#ddb8ff","on-secondary-fixed": "#290947","inverse-on-surface": "#303035",
+          "outline-variant": "#46464f","on-tertiary": "#412d00","info-sky": "#60a5fa","unknown-rose": "#f87171",
+          "error-container": "#93000a","on-tertiary-fixed": "#261900","secondary-fixed": "#f0dbff",
+          "surface-container-lowest": "#0e0e13","tertiary-container": "#f7bd3e","on-error": "#690005",
+          "secondary-fixed-dim": "#ddb8ff","on-tertiary-container": "#6b4d00"
+        },
+        "borderRadius": {"DEFAULT": "0.25rem","lg": "0.5rem","xl": "0.75rem","full": "9999px"},
+        "fontFamily": {
+          "label-caps": ["JetBrains Mono"],"headline-md": ["Playfair Display"],"headline-sm": ["Playfair Display"],
+          "body-lg": ["Hanken Grotesk"],"code-sm": ["JetBrains Mono"],"body-md": ["Hanken Grotesk"]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body { background-color: #131318; color: #e4e1e8; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
 </head>
-<body>
-    <div class="app">
-        <header class="header">
-            <div class="header-brand">
-                <a href="/" class="back-link">← Continuum</a>
-                <h1 class="header-title">Blame-to-Why</h1>
-                <span class="header-badge">Semantic Git Blame</span>
-            </div>
-            <div class="header-controls">
-                <div class="repo-switcher">
-                    <label for="repoSelect" class="repo-label">Repository</label>
-                    <select id="repoSelect" class="repo-select">
-                        <option value="">All indexed repos</option>
-                        <option value="facebook/react">facebook/react</option>
-                        <option value="tiangolo/fastapi">tiangolo/fastapi</option>
-                        <option value="reduxjs/redux">reduxjs/redux</option>
-                        <option value="django/django">django/django</option>
-                        <option value="vuejs/vue">vuejs/vue</option>
-                    </select>
-                </div>
-            </div>
-        </header>
+<body class="font-body-md text-body-md overflow-hidden flex h-screen w-full bg-background">
 
-        <main class="blame-main">
-            <div class="blame-intro">
-                <h2>Why does this code exist?</h2>
-                <p>Paste a code snippet — Continuum searches GitHub PR discussions, issue threads, and commit debates to surface the architectural reasoning behind it.</p>
-            </div>
+<!-- Sidebar -->
+<nav class="hidden md:flex flex-col h-screen fixed left-0 top-0 w-64 bg-surface-container-lowest border-r border-outline-variant z-40">
+  <div class="px-6 py-5 flex items-center gap-3">
+    <span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings:'FILL' 1;">hub</span>
+    <div class="flex flex-col">
+      <span class="font-headline-sm text-on-surface font-bold leading-tight">Continuum</span>
+      <span class="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">Decision Archaeology</span>
+    </div>
+  </div>
+  <div class="px-4 mb-6">
+    <a href="/" class="w-full bg-transparent border border-outline-variant hover:bg-surface-container-high text-on-surface transition-colors py-2 px-3 rounded-lg flex items-center gap-2 justify-start font-body-md">
+      <span class="material-symbols-outlined text-[18px]">add</span> New Audit
+    </a>
+  </div>
+  <div class="flex-1 overflow-y-auto scrollbar-hide px-3 flex flex-col gap-6">
+    <div>
+      <div class="px-3 mb-2 font-label-caps text-on-surface-variant/70 uppercase tracking-wider">Tools</div>
+      <div class="flex flex-col gap-1">
+        <a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-lg px-3 py-2 flex items-center gap-3" href="/">
+          <span class="material-symbols-outlined text-[18px]">chat</span>
+          <span class="font-body-md">Decision Chat</span>
+        </a>
+        <a class="bg-surface-container-highest text-primary rounded-lg px-3 py-2 flex items-center gap-3 transition-colors font-medium" href="/blame">
+          <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">manage_search</span>
+          <span class="font-body-md">Blame-to-Why</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-lg px-3 py-2 flex items-center gap-3" href="/timeline">
+          <span class="material-symbols-outlined text-[18px]">history</span>
+          <span class="font-body-md">Temporal Timeline</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-lg px-3 py-2 flex items-center gap-3" href="/radar">
+          <span class="material-symbols-outlined text-[18px]">radar</span>
+          <span class="font-body-md">Drift Radar</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
 
-            <div class="blame-form-card">
-                <form id="blameForm">
-                    <div class="blame-fields">
-                        <div class="field-group">
-                            <label for="filePathInput">File path (optional)</label>
-                            <input type="text" id="filePathInput" class="text-input" placeholder="e.g. src/auth/gateway.py" maxlength="200">
-                        </div>
-                        <div class="field-group">
-                            <label for="codeInput">Code snippet <span class="required">*</span></label>
-                            <textarea id="codeInput" class="code-textarea" placeholder="Paste the code snippet you want to understand..." rows="8" maxlength="5000"></textarea>
-                        </div>
-                    </div>
-                    <button type="submit" id="blameBtn" class="primary-btn" disabled>
-                        🔍 Explain Why This Exists
-                    </button>
-                </form>
-            </div>
-
-            <!-- Result -->
-            <div class="blame-result" id="blameResult" style="display:none">
-                <div class="result-header">
-                    <h3>🧬 Decision Archaeology Result</h3>
-                    <button id="exportBlameAdrBtn" class="action-btn" style="display:none">📄 Export as ADR</button>
-                </div>
-                <div id="blameAnswer" class="answer-text"></div>
-                <div id="blameConfidence"></div>
-                <div id="blameCitations" class="citations-section"></div>
-            </div>
-        </main>
+<!-- Main Area -->
+<main class="flex-1 md:ml-64 h-screen flex flex-col relative bg-background overflow-y-auto p-6 md:p-8">
+  <div class="max-w-4xl mx-auto w-full flex flex-col gap-6 pb-20">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-primary text-[22px]">manage_search</span>
+        <span class="font-label-caps text-[11px] text-primary uppercase tracking-wider">Semantic Git Blame</span>
+      </div>
+      <h1 class="font-headline-md text-on-surface mb-2">Why Does This Code Exist?</h1>
+      <p class="font-body-lg text-on-surface-variant">Paste a code snippet or module — Continuum recovers the architectural debates, PR reviews, and tradeoffs that justified its implementation.</p>
     </div>
 
-    <script>
-        const API_BASE = window.location.origin;
-        const form = document.getElementById('blameForm');
-        const codeInput = document.getElementById('codeInput');
-        const filePathInput = document.getElementById('filePathInput');
-        const blameBtn = document.getElementById('blameBtn');
-        const blameResult = document.getElementById('blameResult');
-        const blameAnswer = document.getElementById('blameAnswer');
-        const blameConfidence = document.getElementById('blameConfidence');
-        const blameCitations = document.getElementById('blameCitations');
-        const repoSelect = document.getElementById('repoSelect');
-        let lastData = null;
+    <!-- Form Card -->
+    <div class="bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-xl flex flex-col gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="filePathInput" class="font-label-caps text-[11px] text-on-surface-variant uppercase tracking-wider">File Path (Optional Context)</label>
+        <input type="text" id="filePathInput" class="bg-surface-container border border-outline-variant rounded-lg px-3.5 py-2 font-code-sm text-on-surface placeholder-on-surface-variant/40 focus:border-primary/60 outline-none transition-colors" placeholder="e.g. packages/react-reconciler/src/ReactFiberBeginWork.js">
+      </div>
 
-        codeInput.addEventListener('input', () => {
-            blameBtn.disabled = !codeInput.value.trim();
-        });
+      <div class="flex flex-col gap-1.5">
+        <div class="flex justify-between items-center">
+          <label for="codeInput" class="font-label-caps text-[11px] text-on-surface-variant uppercase tracking-wider">Code Snippet <span class="text-unknown-rose">*</span></label>
+          <button type="button" onclick="loadSampleCode()" class="font-code-sm text-primary text-[12px] hover:underline cursor-pointer">Load Sample React Fiber Code</button>
+        </div>
+        <textarea id="codeInput" class="bg-surface-container border border-outline-variant rounded-xl p-4 font-code-sm text-[13px] text-on-surface placeholder-on-surface-variant/40 focus:border-primary/60 outline-none transition-colors min-h-[160px] resize-y" placeholder="Paste the code you want to understand…"></textarea>
+      </div>
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!codeInput.value.trim()) return;
+      <button id="blameBtn" onclick="submitBlame()" class="bg-primary text-on-primary font-body-md font-semibold py-3 px-6 rounded-xl hover:bg-primary-fixed transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
+        <span class="material-symbols-outlined text-[18px]">search</span>
+        <span>Explain Why This Exists</span>
+      </button>
+    </div>
 
-            blameBtn.disabled = true;
-            blameBtn.textContent = '⏳ Searching decision records...';
-            blameResult.style.display = 'none';
+    <!-- Result Area -->
+    <div id="blameResult" class="hidden bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-xl flex flex-col gap-5">
+      <div class="flex items-center justify-between border-b border-outline-variant/60 pb-4">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[20px]">psychology</span>
+          <h2 class="font-headline-sm text-on-surface">Archaeological Rationale</h2>
+        </div>
+        <button id="exportAdrBtn" onclick="exportBlameADR()" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface px-3.5 py-1.5 rounded-lg font-body-md text-[13px] flex items-center gap-1.5 transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[16px] text-primary">download</span> Export ADR
+        </button>
+      </div>
 
-            const body = { code_snippet: codeInput.value };
-            if (filePathInput.value) body.file_path = filePathInput.value;
-            if (repoSelect.value) body.repo = repoSelect.value;
+      <div id="blameAnswer" class="font-body-lg text-on-surface space-y-3 leading-relaxed"></div>
 
-            try {
-                const res = await fetch(`${API_BASE}/api/blame`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
-                });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                lastData = data;
-                renderResult(data);
-            } catch (e) {
-                blameAnswer.innerHTML = `<span style="color:var(--error)">⚠️ ${e.message}</span>`;
-                blameResult.style.display = 'block';
-            } finally {
-                blameBtn.textContent = '🔍 Explain Why This Exists';
-                blameBtn.disabled = false;
-            }
-        });
+      <div id="blameConfidence" class="pt-2"></div>
 
-        function renderResult(data) {
-            // Answer
-            blameAnswer.innerHTML = renderMarkdownLinks(data.answer);
+      <div id="blameCitations" class="pt-2 flex flex-col gap-3"></div>
+    </div>
+  </div>
+</main>
 
-            // Confidence
-            const bd = data.confidence_breakdown || {};
-            const total = (bd.confirmed||0) + (bd.inferred||0) + (bd.unknown||0);
-            blameConfidence.innerHTML = `
-                <span class="confidence-badge ${data.confidence_summary}">
-                    ${data.confidence_summary.replace(/_/g,' ')}
-                </span>
-                ${total > 0 ? `<span class="conf-counts">${bd.confirmed||0} confirmed · ${bd.inferred||0} inferred · ${bd.unknown||0} unknown</span>` : ''}
-            `;
+<script>
+const API_BASE = window.location.origin;
+let lastBlameData = null;
 
-            // Citations
-            if (data.citations && data.citations.length > 0) {
-                blameCitations.innerHTML = `<div class="citations-title">📎 Evidence Sources</div><div class="citation-cards">` +
-                    data.citations.map(c => renderCitationCard(c)).join('') +
-                    `</div>`;
-                const exportBtn = document.getElementById('exportBlameAdrBtn');
-                exportBtn.style.display = 'inline-flex';
-                exportBtn.onclick = () => exportADR(data);
-            } else {
-                blameCitations.innerHTML = '';
-            }
+function loadSampleCode() {
+  document.getElementById('filePathInput').value = 'packages/react-reconciler/src/ReactFiberHooks.js';
+  document.getElementById('codeInput').value = `function mountState(initialState) {
+  var hook = mountWorkInProgressHook();
+  if (typeof initialState === 'function') {
+    initialState = initialState();
+  }
+  hook.memoizedState = hook.baseState = initialState;
+  var queue = hook.queue = {
+    pending: null,
+    interleaved: null,
+    lanes: NoLanes,
+    dispatch: null,
+    lastRenderedReducer: basicStateReducer,
+    lastRenderedState: initialState
+  };
+  var dispatch = queue.dispatch = dispatchSetState.bind(null, currentlyRenderingFiber, queue);
+  return [hook.memoizedState, dispatch];
+}`;
+}
 
-            blameResult.style.display = 'block';
-        }
+async function submitBlame() {
+  const code = document.getElementById('codeInput').value.trim();
+  const filePath = document.getElementById('filePathInput').value.trim();
+  if (!code) return;
 
-        async function exportADR(data) {
-            const question = filePathInput.value
-                ? `Why does the code in ${filePathInput.value} exist?`
-                : 'Why does this code exist?';
-            const res = await fetch(`${API_BASE}/api/export-adr`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question, answer: data.answer, citations: data.citations, confidence_summary: data.confidence_summary }),
-            });
-            if (!res.ok) return;
-            const d = await res.json();
-            const blob = new Blob([d.content], { type: 'text/markdown' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = d.filename; a.click();
-            URL.revokeObjectURL(url);
-        }
+  const btn = document.getElementById('blameBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">sync</span><span>Searching historical PR discussions…</span>';
 
-        function renderCitationCard(c) {
-            const badgeClass = c.confidence === 'confirmed' ? 'badge-confirmed' : c.confidence === 'inferred' ? 'badge-inferred' : 'badge-unknown';
-            const authorHtml = c.author ? `<div class="citation-author"><img class="author-avatar" src="https://github.com/${c.author}.png?size=20" alt="@${c.author}" onerror="this.style.display='none'"><span>@${c.author}</span></div>` : '';
-            const quoteHtml = c.quote ? `<blockquote class="citation-quote">"${escHtml(c.quote)}"</blockquote>` : '';
-            return `<div class="citation-card"><div class="citation-card-header"><span class="citation-badge ${badgeClass}">${c.confidence}</span>${authorHtml}<a class="citation-source-link" href="${escHtml(c.source_url)}" target="_blank" rel="noopener">${c.source_type.toUpperCase()} #${c.source_id} ↗</a></div><div class="citation-claim">${escHtml(c.text)}</div>${quoteHtml}</div>`;
-        }
+  const resultContainer = document.getElementById('blameResult');
+  resultContainer.classList.add('hidden');
 
-        function escHtml(t) { const d = document.createElement('div'); d.textContent = t||''; return d.innerHTML; }
-        function renderMarkdownLinks(t) { return escHtml(t).replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>'); }
-    </script>
+  try {
+    const res = await fetch(`${API_BASE}/api/blame`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({code_snippet: code, file_path: filePath || null})
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({detail:'Blame failed'}))).detail);
+    const data = await res.json();
+    lastBlameData = { ...data, filePath, code };
+    renderBlameResult(data);
+  } catch(e) {
+    document.getElementById('blameAnswer').innerHTML = `<span class="text-unknown-rose">⚠️ ${esc(e.message)}</span>`;
+    resultContainer.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">search</span><span>Explain Why This Exists</span>';
+  }
+}
+
+function renderBlameResult(data) {
+  document.getElementById('blameAnswer').innerHTML = renderMarkdown(data.answer);
+
+  const bd = data.confidence_breakdown || {};
+  const total = (bd.confirmed||0) + (bd.inferred||0) + (bd.unknown||0);
+  const confirmedPct = total ? Math.round((bd.confirmed||0)/total*100) : 0;
+
+  if (total > 0) {
+    document.getElementById('blameConfidence').innerHTML = `
+      <div class="flex items-center gap-3 bg-surface-container-lowest p-3 rounded-xl border border-outline-variant">
+        <div class="h-2 flex-1 bg-surface-container-highest rounded-full overflow-hidden flex">
+          <div class="h-full bg-confirmed-emerald" style="width:${confirmedPct}%"></div>
+          <div class="h-full bg-inferred-amber" style="width:${total ? Math.round((bd.inferred||0)/total*100) : 0}%"></div>
+          <div class="h-full bg-unknown-rose" style="width:${total ? Math.round((bd.unknown||0)/total*100) : 0}%"></div>
+        </div>
+        <span class="font-code-sm text-[12px] text-primary whitespace-nowrap">${confirmedPct}% Confirmed</span>
+      </div>`;
+  } else {
+    document.getElementById('blameConfidence').innerHTML = '';
+  }
+
+  if (data.citations && data.citations.length > 0) {
+    document.getElementById('blameCitations').innerHTML = `
+      <span class="font-label-caps text-on-surface-variant uppercase text-[11px] tracking-wider">Historical Evidence Sources</span>
+      <div class="flex flex-col gap-2.5">
+        ${data.citations.map(c => `
+          <div class="bg-surface-container p-3.5 rounded-xl border border-outline-variant flex flex-col gap-2 relative overflow-hidden">
+            <div class="flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                ${c.author ? `<img class="w-5 h-5 rounded-full border border-outline-variant" src="https://github.com/${esc(c.author)}.png?size=20" onerror="this.style.display='none'"/><span class="font-code-sm text-on-surface">@${esc(c.author)}</span>` : ''}
+                <span class="bg-surface-container-highest px-2 py-0.5 rounded font-label-caps text-[11px] text-on-surface-variant">${esc(c.source_type.toUpperCase())} #${esc(c.source_id)}</span>
+                <span class="px-2 py-0.5 rounded-full font-label-caps text-[10px] ${c.confidence==='confirmed' ? 'bg-confirmed-emerald/20 text-confirmed-emerald' : 'bg-inferred-amber/20 text-inferred-amber'}">${esc(c.confidence)}</span>
+              </div>
+              <a href="${esc(c.source_url)}" target="_blank" rel="noopener" class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 font-code-sm text-[12px]">
+                <span>Source</span><span class="material-symbols-outlined text-[14px]">open_in_new</span>
+              </a>
+            </div>
+            <p class="font-body-md text-on-surface">${esc(c.text)}</p>
+            ${c.quote ? `<blockquote class="font-code-sm text-on-surface-variant/80 border-l-2 border-primary/50 pl-3 italic">"${esc(c.quote)}"</blockquote>` : ''}
+          </div>
+        `).join('')}
+      </div>`;
+  } else {
+    document.getElementById('blameCitations').innerHTML = '';
+  }
+
+  document.getElementById('blameResult').classList.remove('hidden');
+}
+
+async function exportBlameADR() {
+  if (!lastBlameData) return;
+  const question = lastBlameData.filePath ? `Why does code in ${lastBlameData.filePath} exist?` : 'Why does this code exist?';
+  const res = await fetch(`${API_BASE}/api/export-adr`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      question,
+      answer: lastBlameData.answer,
+      citations: lastBlameData.citations || [],
+      confidence_summary: lastBlameData.confidence_summary || 'partial_evidence'
+    })
+  });
+  if (!res.ok) return;
+  const d = await res.json();
+  const blob = new Blob([d.content], {type:'text/markdown'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=d.filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function esc(t) { const d=document.createElement('div');d.textContent=t||'';return d.innerHTML; }
+function renderMarkdown(text) {
+  return esc(text)
+    .replace(/\*\*(.+?)\*\*/g,'<strong class="text-on-surface">$1</strong>')
+    .replace(/`(.+?)`/g,'<code class="font-code-sm bg-surface-container-highest px-1.5 py-0.5 rounded text-primary">$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener" class="text-primary underline hover:text-primary-fixed">$1</a>')
+    .replace(/\n/g,'<br>');
+}
+</script>
 </body>
 </html>

@@ -1,180 +1,239 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drift Radar — Continuum</title>
-    <meta name="description" content="Detect architectural drift and decisions that contradict your stated principles.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Continuum — Architectural Drift Radar</title>
+<meta name="description" content="Detect architectural drift and decisions that contradict team principles."/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "surface-bright": "#39393e","on-surface-variant": "#c7c5d0","outline": "#91909a",
+          "surface-tint": "#bdc2ff","inferred-amber": "#fbbf24","surface": "#131318","background": "#131318",
+          "error": "#ffb4ab","primary-container": "#bdc2ff","obsidian-deep": "#0a0a0f",
+          "surface-dim": "#131318","surface-container-high": "#2a292f","on-background": "#e4e1e8",
+          "surface-variant": "#35343a","surface-container-low": "#1b1b20",
+          "confirmed-emerald": "#34d399","primary": "#dfe0ff","surface-container": "#1f1f24",
+          "on-surface": "#e4e1e8","surface-container-highest": "#35343a",
+          "secondary": "#ddb8ff","outline-variant": "#46464f","info-sky": "#60a5fa","unknown-rose": "#f87171",
+          "surface-container-lowest": "#0e0e13"
+        },
+        "borderRadius": {"DEFAULT": "0.25rem","lg": "0.5rem","xl": "0.75rem","full": "9999px"},
+        "fontFamily": {
+          "label-caps": ["JetBrains Mono"],"headline-md": ["Playfair Display"],"headline-sm": ["Playfair Display"],
+          "body-lg": ["Hanken Grotesk"],"code-sm": ["JetBrains Mono"],"body-md": ["Hanken Grotesk"]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body { background-color: #131318; color: #e4e1e8; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
 </head>
-<body>
-    <div class="app">
-        <header class="header">
-            <div class="header-brand">
-                <a href="/" class="back-link">← Continuum</a>
-                <h1 class="header-title">Drift Radar</h1>
-                <span class="header-badge">Architectural Invariant Checker</span>
-            </div>
-            <div class="header-controls">
-                <div class="repo-switcher">
-                    <label for="repoSelect" class="repo-label">Repository</label>
-                    <select id="repoSelect" class="repo-select">
-                        <option value="">All indexed repos</option>
-                        <option value="facebook/react">facebook/react</option>
-                        <option value="tiangolo/fastapi">tiangolo/fastapi</option>
-                        <option value="reduxjs/redux">reduxjs/redux</option>
-                        <option value="django/django">django/django</option>         
-                        <option value="vuejs/vue">vuejs/vue</option>
-                    </select>
-                </div>
-            </div>
-        </header>
+<body class="font-body-md text-body-md overflow-hidden flex h-screen w-full bg-background">
 
-        <main class="timeline-main">
-            <div class="blame-intro">
-                <h2>Is your architecture drifting?</h2>
-                <p>Enter an architectural principle or invariant. Continuum scans recent decisions and flags any that silently contradict it.</p>
-            </div>
+<!-- Sidebar -->
+<nav class="hidden md:flex flex-col h-screen fixed left-0 top-0 w-64 bg-surface-container-lowest border-r border-outline-variant z-40">
+  <div class="px-6 py-5 flex items-center gap-3">
+    <span class="material-symbols-outlined text-primary text-[28px]" style="font-variation-settings:'FILL' 1;">hub</span>
+    <div class="flex flex-col">
+      <span class="font-headline-sm text-on-surface font-bold leading-tight">Continuum</span>
+      <span class="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">Decision Archaeology</span>
+    </div>
+  </div>
+  <div class="px-4 mb-6">
+    <a href="/" class="w-full bg-transparent border border-outline-variant hover:bg-surface-container-high text-on-surface transition-colors py-2 px-3 rounded-lg flex items-center gap-2 justify-start font-body-md">
+      <span class="material-symbols-outlined text-[18px]">add</span> New Audit
+    </a>
+  </div>
+  <div class="flex-1 overflow-y-auto scrollbar-hide px-3 flex flex-col gap-6">
+    <div>
+      <div class="px-3 mb-2 font-label-caps text-on-surface-variant/70 uppercase tracking-wider">Tools</div>
+      <div class="flex flex-col gap-1">
+        <a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-lg px-3 py-2 flex items-center gap-3" href="/">
+          <span class="material-symbols-outlined text-[18px]">chat</span>
+          <span class="font-body-md">Decision Chat</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-lg px-3 py-2 flex items-center gap-3" href="/blame">
+          <span class="material-symbols-outlined text-[18px]">manage_search</span>
+          <span class="font-body-md">Blame-to-Why</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-lg px-3 py-2 flex items-center gap-3" href="/timeline">
+          <span class="material-symbols-outlined text-[18px]">history</span>
+          <span class="font-body-md">Temporal Timeline</span>
+        </a>
+        <a class="bg-surface-container-highest text-primary rounded-lg px-3 py-2 flex items-center gap-3 transition-colors font-medium" href="/radar">
+          <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">radar</span>
+          <span class="font-body-md">Drift Radar</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
 
-            <div class="blame-form-card">
-                <form id="radarForm">
-                    <div class="field-group">
-                        <label for="principleInput">Architectural principle <span class="required">*</span></label>
-                        <textarea id="principleInput" class="text-input" rows="3" placeholder="e.g. 'All database mutations must go through the event bus' or 'No direct SQL queries from service layer'" maxlength="1000"></textarea>
-                    </div>
-                    <div class="field-group">
-                        <label for="recentN">Decisions to scan</label>
-                        <input type="number" id="recentN" class="text-input" value="20" min="5" max="100" style="width:100px">
-                    </div>
-                    <button type="submit" id="radarBtn" class="primary-btn" disabled>
-                        🚨 Scan for Drift
-                    </button>
-                </form>
-            </div>
-
-            <!-- Preset examples -->
-            <div class="preset-chips">
-                <span class="preset-label">Try:</span>
-                <button class="preset-chip" data-principle="All database mutations must go through the event bus">Event bus rule</button>
-                <button class="preset-chip" data-principle="Authentication must never be handled at the service layer — only at the gateway">Auth at gateway</button>
-                <button class="preset-chip" data-principle="All API responses must be paginated for collections larger than 100 items">Pagination rule</button>
-            </div>
-
-            <!-- Result -->
-            <div id="radarResult" style="display:none">
-                <div class="radar-summary">
-                    <div class="radar-gauge" id="radarGauge"></div>
-                    <div class="radar-stats">
-                        <div class="radar-stat violations" id="violationStat"></div>
-                        <div class="radar-stat clean" id="cleanStat"></div>
-                    </div>
-                </div>
-                <div id="radarPrinciple" class="radar-principle-display"></div>
-                <div id="radarViolations"></div>
-            </div>
-        </main>
+<!-- Main Area -->
+<main class="flex-1 md:ml-64 h-screen flex flex-col relative bg-background overflow-y-auto p-6 md:p-8">
+  <div class="max-w-4xl mx-auto w-full flex flex-col gap-6 pb-20">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-primary text-[22px]">radar</span>
+        <span class="font-label-caps text-[11px] text-primary uppercase tracking-wider">Invariant Checker</span>
+      </div>
+      <h1 class="font-headline-md text-on-surface mb-2">Architectural Drift Radar</h1>
+      <p class="font-body-lg text-on-surface-variant">Enter a team rule or architectural invariant. Continuum scans historical decisions and flags any silent contradictions.</p>
     </div>
 
-    <script>
-        const API_BASE = window.location.origin;
-        const form = document.getElementById('radarForm');
-        const principleInput = document.getElementById('principleInput');
-        const radarBtn = document.getElementById('radarBtn');
-        const recentN = document.getElementById('recentN');
-        const repoSelect = document.getElementById('repoSelect');
-        const radarResult = document.getElementById('radarResult');
+    <!-- Principle Card -->
+    <div class="bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-xl flex flex-col gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="principleInput" class="font-label-caps text-[11px] text-on-surface-variant uppercase tracking-wider">Architectural Principle / Rule <span class="text-unknown-rose">*</span></label>
+        <textarea id="principleInput" class="bg-surface-container border border-outline-variant rounded-xl p-3.5 font-body-md text-on-surface placeholder-on-surface-variant/40 focus:border-primary/60 outline-none transition-colors min-h-[90px] resize-y" placeholder="e.g. All state mutations must be immutable without direct object mutation"></textarea>
+      </div>
 
-        principleInput.addEventListener('input', () => { radarBtn.disabled = !principleInput.value.trim(); });
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-label-caps text-[11px] text-on-surface-variant uppercase">Presets:</span>
+        <button onclick="setPrinciple('State updates must be purely immutable without direct mutation of existing objects')" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface px-3 py-1 rounded-full text-[12px] font-code-sm transition-colors cursor-pointer">Immutability Rule</button>
+        <button onclick="setPrinciple('Components must not access global window or document directly without a wrapper')" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface px-3 py-1 rounded-full text-[12px] font-code-sm transition-colors cursor-pointer">DOM Encapsulation</button>
+        <button onclick="setPrinciple('All side-effects must be declared inside lifecycle or hook primitives rather than render phase')" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface px-3 py-1 rounded-full text-[12px] font-code-sm transition-colors cursor-pointer">Side-Effect Isolation</button>
+      </div>
 
-        document.querySelectorAll('.preset-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-                principleInput.value = chip.dataset.principle;
-                radarBtn.disabled = false;
-            });
-        });
+      <button id="radarBtn" onclick="submitRadar()" class="bg-primary text-on-primary font-body-md font-semibold py-3 px-6 rounded-xl hover:bg-primary-fixed transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
+        <span class="material-symbols-outlined text-[18px]">satellite_alt</span>
+        <span>Scan Decisions for Drift</span>
+      </button>
+    </div>
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!principleInput.value.trim()) return;
-            radarBtn.disabled = true;
-            radarBtn.textContent = '⏳ Scanning...';
-            radarResult.style.display = 'none';
+    <!-- Results Area -->
+    <div id="radarResult" class="hidden flex flex-col gap-6">
+      <!-- Gauge / Stats Bar -->
+      <div class="bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-5">
+          <div class="w-20 h-20 rounded-full border-4 flex flex-col items-center justify-center shadow-lg" id="gaugeCircle">
+            <span class="font-headline-sm font-bold" id="driftPct">0%</span>
+            <span class="font-label-caps text-[9px] uppercase tracking-wider text-on-surface-variant">Drift</span>
+          </div>
+          <div>
+            <h3 class="font-headline-sm text-on-surface mb-1">Audit Summary</h3>
+            <p class="font-body-md text-on-surface-variant text-[13px]" id="scannedText">Scanned 20 decision records</p>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <div class="bg-surface-container px-4 py-2.5 rounded-xl border border-outline-variant flex flex-col items-center">
+            <span class="font-headline-sm text-unknown-rose font-bold" id="violationCount">0</span>
+            <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Violations</span>
+          </div>
+          <div class="bg-surface-container px-4 py-2.5 rounded-xl border border-outline-variant flex flex-col items-center">
+            <span class="font-headline-sm text-confirmed-emerald font-bold" id="cleanCount">0</span>
+            <span class="font-label-caps text-[10px] text-on-surface-variant uppercase">Compliant</span>
+          </div>
+        </div>
+      </div>
 
-            const body = {
-                principle: principleInput.value,
-                recent_n: parseInt(recentN.value) || 20,
-            };
-            if (repoSelect.value) body.repo = repoSelect.value;
+      <!-- Violation List -->
+      <div id="violationsList" class="flex flex-col gap-4"></div>
+    </div>
+  </div>
+</main>
 
-            try {
-                const res = await fetch(`${API_BASE}/api/drift-radar`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
-                });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                renderRadarResult(data);
-            } catch (e) {
-                document.getElementById('radarViolations').innerHTML = `<p style="color:var(--error)">⚠️ ${e.message}</p>`;
-                radarResult.style.display = 'block';
-            } finally {
-                radarBtn.textContent = '🚨 Scan for Drift';
-                radarBtn.disabled = false;
-            }
-        });
+<script>
+const API_BASE = window.location.origin;
 
-        function renderRadarResult(data) {
-            const violationCount = data.violations.length;
-            const total = data.total_scanned;
-            const clean = data.clean_count;
-            const driftPct = total > 0 ? Math.round((violationCount / total) * 100) : 0;
+function setPrinciple(p) {
+  document.getElementById('principleInput').value = p;
+  submitRadar();
+}
 
-            // Summary
-            document.getElementById('radarGauge').innerHTML = `
-                <div class="gauge-circle ${violationCount > 0 ? 'has-violations' : 'clean'}">
-                    <span class="gauge-number">${driftPct}%</span>
-                    <span class="gauge-label">drift</span>
+async function submitRadar() {
+  const principle = document.getElementById('principleInput').value.trim();
+  if (!principle) return;
+
+  const btn = document.getElementById('radarBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">sync</span><span>Scanning for architectural drift…</span>';
+
+  const resultEl = document.getElementById('radarResult');
+  resultEl.classList.add('hidden');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/drift-radar`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({principle, recent_n: 20})
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({detail:'Radar scan failed'}))).detail);
+    const data = await res.json();
+    renderRadar(data);
+  } catch(e) {
+    alert('Radar scan error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">satellite_alt</span><span>Scan Decisions for Drift</span>';
+  }
+}
+
+function renderRadar(data) {
+  const violations = data.violations || [];
+  const total = data.total_scanned || 0;
+  const clean = data.clean_count || 0;
+  const driftPct = total > 0 ? Math.round((violations.length / total) * 100) : 0;
+
+  document.getElementById('driftPct').textContent = `${driftPct}%`;
+  document.getElementById('scannedText').textContent = `Scanned ${total} decisions against rule`;
+  document.getElementById('violationCount').textContent = violations.length;
+  document.getElementById('cleanCount').textContent = clean;
+
+  const gauge = document.getElementById('gaugeCircle');
+  if (violations.length > 0) {
+    gauge.className = 'w-20 h-20 rounded-full border-4 border-unknown-rose/80 bg-unknown-rose/10 flex flex-col items-center justify-center text-unknown-rose shadow-lg';
+  } else {
+    gauge.className = 'w-20 h-20 rounded-full border-4 border-confirmed-emerald/80 bg-confirmed-emerald/10 flex flex-col items-center justify-center text-confirmed-emerald shadow-lg';
+  }
+
+  const list = document.getElementById('violationsList');
+  if (violations.length === 0) {
+    list.innerHTML = `
+      <div class="bg-confirmed-emerald/10 border border-confirmed-emerald/30 rounded-2xl p-6 text-center text-confirmed-emerald font-body-lg">
+        ✅ Zero architectural drift detected. All ${total} scanned decisions comply with your stated invariant.
+      </div>`;
+  } else {
+    list.innerHTML = `
+      <span class="font-label-caps text-on-surface-variant uppercase text-[11px] tracking-wider">Detected Violations (${violations.length})</span>
+      <div class="flex flex-col gap-3">
+        ${violations.map(v => {
+          const sev = (v.severity||'medium').toLowerCase();
+          const badgeStyle = sev === 'high' ? 'bg-unknown-rose/20 text-unknown-rose border-unknown-rose/30'
+                           : sev === 'medium' ? 'bg-inferred-amber/20 text-inferred-amber border-inferred-amber/30'
+                           : 'bg-confirmed-emerald/20 text-confirmed-emerald border-confirmed-emerald/30';
+          return `
+            <div class="bg-surface-container-low border border-outline-variant hover:border-outline rounded-2xl p-5 flex flex-col gap-2.5 transition-colors shadow-lg">
+              <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-full font-label-caps text-[10px] border ${badgeStyle} uppercase font-semibold">${esc(v.severity || 'MEDIUM')} RISK</span>
+                  <span class="font-body-md font-semibold text-on-surface text-[15px]">${esc(v.title)}</span>
                 </div>
-            `;
-            document.getElementById('violationStat').innerHTML = `<span class="stat-number">${violationCount}</span><span class="stat-label">violations</span>`;
-            document.getElementById('cleanStat').innerHTML = `<span class="stat-number">${clean}</span><span class="stat-label">clean</span>`;
-            document.getElementById('radarPrinciple').innerHTML = `<strong>Principle:</strong> "${escHtml(data.principle)}"`;
+                <a href="${esc(v.source_url)}" target="_blank" rel="noopener" class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 font-code-sm text-[12px]">
+                  <span>Source</span><span class="material-symbols-outlined text-[14px]">open_in_new</span>
+                </a>
+              </div>
+              <p class="font-body-md text-on-surface-variant text-[14px] leading-relaxed bg-surface-container p-3 rounded-xl border border-outline-variant/50">${esc(v.violation_reason)}</p>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
 
-            // Violations list
-            const container = document.getElementById('radarViolations');
-            if (violationCount === 0) {
-                container.innerHTML = `
-                    <div class="radar-clean-banner">
-                        ✅ No architectural drift detected across ${total} scanned decisions.
-                    </div>
-                `;
-            } else {
-                container.innerHTML = `<h3 class="violations-heading">⚠️ Violations Found</h3>` +
-                    data.violations.map(v => {
-                        const sev = v.severity || 'medium';
-                        const sevIcon = sev === 'high' ? '🔴' : sev === 'medium' ? '🟡' : '🟢';
-                        return `
-                            <div class="violation-card severity-${sev}">
-                                <div class="violation-header">
-                                    <span class="severity-badge">${sevIcon} ${sev.toUpperCase()}</span>
-                                    <a href="${escHtml(v.source_url)}" target="_blank" rel="noopener" class="violation-source">
-                                        View Source ↗
-                                    </a>
-                                </div>
-                                <div class="violation-title">${escHtml(v.title)}</div>
-                                <div class="violation-reason">${escHtml(v.violation_reason)}</div>
-                            </div>
-                        `;
-                    }).join('');
-            }
+  document.getElementById('radarResult').classList.remove('hidden');
+}
 
-            radarResult.style.display = 'block';
-        }
-
-        function escHtml(t) { const d = document.createElement('div'); d.textContent = t||''; return d.innerHTML; }
-    </script>
+function esc(t) { const d=document.createElement('div');d.textContent=t||'';return d.innerHTML; }
+</script>
 </body>
 </html>
