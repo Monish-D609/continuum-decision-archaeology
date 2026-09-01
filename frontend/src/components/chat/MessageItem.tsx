@@ -32,12 +32,26 @@ function renderFormattedText(text: string): React.ReactNode {
         </h3>
       );
     }
-    // H3 header
+    // H3 header (Archaeological Sections)
     if (trimmed.startsWith('### ')) {
+      const title = trimmed.slice(4);
+      let badgeStyle = "text-primary bg-primary/10 border-primary/20";
+      if (title.includes('⚰️') || title.toLowerCase().includes('graveyard')) {
+        badgeStyle = "text-unknown-rose bg-unknown-rose/10 border-unknown-rose/30";
+      } else if (title.includes('📜') || title.toLowerCase().includes('decision')) {
+        badgeStyle = "text-confirmed-emerald bg-confirmed-emerald/10 border-confirmed-emerald/30";
+      } else if (title.includes('🧬') || title.toLowerCase().includes('drift')) {
+        badgeStyle = "text-inferred-amber bg-inferred-amber/10 border-inferred-amber/30";
+      } else if (title.includes('🏛️') || title.toLowerCase().includes('context')) {
+        badgeStyle = "text-primary bg-primary/10 border-primary/20";
+      }
+
       return (
-        <h4 key={blockIdx} className="font-body-md text-primary font-semibold mt-3 mb-1.5 text-[15px]">
-          {trimmed.slice(4)}
-        </h4>
+        <div key={blockIdx} className="mt-5 mb-2.5">
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border font-label-caps text-[12px] font-semibold tracking-wide ${badgeStyle}`}>
+            {title}
+          </div>
+        </div>
       );
     }
 
