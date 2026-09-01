@@ -19,7 +19,8 @@ export const App: React.FC = () => {
   // Chat history state
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loadSession, setLoadSession] = useState<ChatSessionDetail | null>(null);
-  const [chatKey, setChatKey] = useState(0); // increment to fully reset DecisionChat
+  const [chatKey, setChatKey] = useState(0);
+  const [sessionLoading, setSessionLoading] = useState<string | null>(null); // sessionId being loaded
 
   useEffect(() => {
     const fetchHealth = async () => {
@@ -54,11 +55,18 @@ export const App: React.FC = () => {
   };
 
   const handleLoadSession = async (sessionId: string) => {
+    setSessionLoading(sessionId);
     try {
       const detail = await api.getSession(sessionId);
+      // Increment key so DecisionChat fully remounts with the loaded session
+      setChatKey((k) => k + 1);
       setLoadSession(detail);
       setActiveView('chat');
-    } catch {}
+    } catch {
+      alert('Could not load session — please try again.');
+    } finally {
+      setSessionLoading(null);
+    }
   };
 
   const handleDeleteSession = async (sessionId: string) => {
@@ -93,6 +101,7 @@ export const App: React.FC = () => {
         sessions={sessions}
         onLoadSession={handleLoadSession}
         onDeleteSession={handleDeleteSession}
+        sessionLoading={sessionLoading}
       />
 
       <main className="flex-1 md:ml-64 h-screen flex flex-col relative bg-background overflow-hidden">

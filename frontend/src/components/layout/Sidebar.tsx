@@ -10,6 +10,7 @@ interface SidebarProps {
   sessions: ChatSession[];
   onLoadSession: (sessionId: string) => void;
   onDeleteSession: (sessionId: string) => void;
+  sessionLoading: string | null;
 }
 
 function timeAgo(iso: string): string {
@@ -31,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   sessions,
   onLoadSession,
   onDeleteSession,
+  sessionLoading,
 }) => {
   const [historyOpen, setHistoryOpen] = useState(true);
   const [hoveredSession, setHoveredSession] = useState<string | null>(null);
@@ -134,17 +136,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <button
                     onClick={() => onLoadSession(s.id)}
-                    className="flex-1 min-w-0 px-3 py-2 text-left cursor-pointer"
+                    disabled={sessionLoading === s.id}
+                    className="flex-1 min-w-0 px-3 py-2 text-left cursor-pointer disabled:cursor-wait"
                   >
-                    <p className="font-body-md text-on-surface-variant group-hover:text-on-surface text-[13px] truncate leading-snug">
-                      {s.title || 'Untitled session'}
-                    </p>
-                    <p className="font-code-sm text-on-surface-variant/50 text-[10px] mt-0.5">
-                      {timeAgo(s.updated_at)}
-                    </p>
+                    {sessionLoading === s.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin inline-block" />
+                        <p className="font-body-md text-primary text-[13px]">Loading…</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="font-body-md text-on-surface-variant group-hover:text-on-surface text-[13px] truncate leading-snug">
+                          {s.title || 'Untitled session'}
+                        </p>
+                        <p className="font-code-sm text-on-surface-variant/50 text-[10px] mt-0.5">
+                          {timeAgo(s.updated_at)}
+                        </p>
+                      </>
+                    )}
                   </button>
 
-                  {hoveredSession === s.id && (
+                  {hoveredSession === s.id && sessionLoading !== s.id && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id); }}
                       className="shrink-0 mr-2 p-1 rounded hover:bg-unknown-rose/20 text-on-surface-variant/40 hover:text-unknown-rose transition-colors cursor-pointer"
