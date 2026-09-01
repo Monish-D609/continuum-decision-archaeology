@@ -69,6 +69,7 @@ export const App: React.FC = () => {
               selectedRepo={selectedRepo}
               externalQuery={presetQuery}
               onClearExternalQuery={() => setPresetQuery(null)}
+              health={health}
             />
           )}
 

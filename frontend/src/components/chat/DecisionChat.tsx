@@ -2,17 +2,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { api } from '../../api/client';
 import type { Citation } from '../../types/api';
 import { MessageItem, type ChatMessage } from './MessageItem';
+import { MemoryOverview } from '../overview/MemoryOverview';
 
 interface DecisionChatProps {
   selectedRepo: string;
   externalQuery?: { text: string; mode?: 'query' | 'graveyard' } | null;
   onClearExternalQuery?: () => void;
+  health: { status: string; recordCount: number; message: string } | null;
 }
 
 export const DecisionChat: React.FC<DecisionChatProps> = ({
   selectedRepo,
   externalQuery,
   onClearExternalQuery,
+  health,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -111,6 +114,77 @@ export const DecisionChat: React.FC<DecisionChatProps> = ({
       alert('ADR Export failed: ' + e.message);
     }
   };
+
+  // ── Engineering Memory Overview (replaces empty chatbot state) ──
+  if (messages.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col relative h-full overflow-hidden">
+        <MemoryOverview
+          selectedRepo={selectedRepo}
+          health={health}
+          onSelectPreset={(q, m) => {
+            if (m) setMode(m);
+            handleSend(q, m || mode);
+          }}
+          onOpenChat={() => {
+            if (textareaRef.current) textareaRef.current.focus();
+          }}
+        />
+        {/* Sticky Bottom Input Bar — always accessible */}
+        <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-background via-background/97 to-transparent pt-8 pb-5 px-4">
+          <div className="max-w-[780px] mx-auto flex flex-col gap-2.5">
+            <div className="flex items-center bg-surface-container-low p-0.5 rounded-lg border border-outline-variant w-fit">
+              <button
+                onClick={() => setMode('query')}
+                className={`px-3 py-1.5 rounded-md font-body-md flex items-center gap-1.5 transition-colors cursor-pointer text-[13px] ${
+                  mode === 'query'
+                    ? 'bg-surface-container text-on-surface shadow-sm'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px] text-primary">lightbulb</span>
+                Ask Why
+              </button>
+              <button
+                onClick={() => setMode('graveyard')}
+                className={`px-3 py-1.5 rounded-md font-body-md flex items-center gap-1.5 transition-colors cursor-pointer text-[13px] ${
+                  mode === 'graveyard'
+                    ? 'bg-surface-container text-unknown-rose shadow-sm'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px]">skull</span>
+                Graveyard
+              </button>
+            </div>
+            <div className="bg-surface-container-low border border-outline-variant rounded-2xl p-2 flex items-end gap-2 focus-within:border-primary/60 transition-colors shadow-xl">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.target.style.height = '';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder={mode === 'graveyard' ? 'Search rejected approaches…' : 'Unearth decisions — ask why anything was built this way…'}
+                rows={1}
+                style={{ minHeight: '44px' }}
+                className="w-full bg-transparent border-none text-on-surface font-body-lg placeholder-on-surface-variant/40 focus:ring-0 resize-none max-h-[160px] py-3 px-1 outline-none"
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={!input.trim() || isLoading}
+                className="bg-primary text-on-primary p-2.5 rounded-xl hover:bg-primary-fixed transition-colors shrink-0 mb-1 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-md"
+              >
+                <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>arrow_upward</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col relative h-full overflow-hidden">

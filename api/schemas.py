@@ -257,3 +257,26 @@ class DriftRadarResponse(BaseModel):
     violations: list[DriftViolation]
     clean_count: int = Field(description="Number of decisions that DON'T violate the principle")
     total_scanned: int
+
+
+# ── Stats ─────────────────────────────────────────────────────────────────────
+
+class RepositoryStats(BaseModel):
+    """Per-repository breakdown for the engineering memory overview."""
+    repo: str
+    decision_count: int
+    rejected_count: int
+    pr_count: int
+    issue_count: int
+
+
+class StatsResponse(BaseModel):
+    """Response for GET /api/stats — powers the Engineering Memory dashboard."""
+    total_decisions: int = Field(description="Total indexed decision records")
+    rejected_count: int = Field(description="Records with explicitly rejected alternatives")
+    pr_count: int = Field(description="Total pull requests analyzed")
+    issue_count: int = Field(description="Total issues analyzed")
+    repositories: list[RepositoryStats] = Field(default_factory=list)
+    last_indexed_at: Optional[str] = Field(default=None, description="ISO timestamp of last indexing")
+    knowledge_coverage_pct: int = Field(default=0, description="Rough decision coverage percentage (0-100)")
+

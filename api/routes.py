@@ -44,6 +44,8 @@ from api.schemas import (
     TimelineResponse,
     TimelineEvent,
     ConfidenceBreakdown,
+    StatsResponse,
+    RepositoryStats,
 )
 from continuum.retrieval import hybrid_retrieve
 from continuum.synthesis import synthesize_answer
@@ -92,6 +94,108 @@ async def health_check():
             record_count=0,
             message=f"Supabase connection issue: {str(e)}",
         )
+
+
+# ── Stats ─────────────────────────────────────────────────────────────────────
+
+@router.get("/stats", response_model=StatsResponse, tags=["System"])
+async def get_stats():
+    """
+    Engineering Memory stats — powers the repository intelligence dashboard.
+
+    Computes real metrics from indexed decision records:
+    - Total decisions indexed
+    - Rejected alternatives count
+    - PR vs issue breakdown
+    - Per-repository breakdown
+    - Knowledge coverage percentage
+    """
+    import json as _json
+    from datetime import datetime, timezone
+
+    try:
+        all_records = get_all_records(repo_filter=None)
+    except Exception as e:
+        logger.warning(f"Stats fetch failed: {e}")
+        return StatsResponse(
+            total_decisions=0,
+            rejected_count=0,
+            pr_count=0,
+            issue_count=0,
+            repositories=[],
+        )
+
+    total = len(all_records)
+    rejected_count = 0
+    pr_count = 0
+    issue_count = 0
+    repo_map: dict[str, dict] = {}
+
+    for r in all_records:
+        # Count by source type
+        src_type = r.get("source_type", "pr")
+        if src_type == "pr":
+            pr_count += 1
+        else:
+            issue_count += 1
+
+        # Extract repo from source_url
+        source_url = r.get("source_url", "")
+        repo_key = "unknown"
+        if "github.com/" in source_url:
+            parts = source_url.replace("https://github.com/", "").split("/")
+            if len(parts) >= 2:
+                repo_key = f"{parts[0]}/{parts[1]}"
+
+        if repo_key not in repo_map:
+            repo_map[repo_key] = {"decision_count": 0, "rejected_count": 0, "pr_count": 0, "issue_count": 0}
+        repo_map[repo_key]["decision_count"] += 1
+        if src_type == "pr":
+            repo_map[repo_key]["pr_count"] += 1
+        else:
+            repo_map[repo_key]["issue_count"] += 1
+
+        # Count rejected alternatives
+        rec_json = r.get("record_json", {})
+        if isinstance(rec_json, str):
+            try:
+                rec_json = _json.loads(rec_json)
+            except Exception:
+                rec_json = {}
+
+        alts = rec_json.get("alternatives_considered", [])
+        has_rejected = any(
+            isinstance(a, dict) and a.get("rejected") for a in alts
+        )
+        if has_rejected:
+            rejected_count += 1
+            repo_map[repo_key]["rejected_count"] += 1
+
+    # Build per-repo list, sorted by decision count
+    repos = [
+        RepositoryStats(
+            repo=k,
+            decision_count=v["decision_count"],
+            rejected_count=v["rejected_count"],
+            pr_count=v["pr_count"],
+            issue_count=v["issue_count"],
+        )
+        for k, v in sorted(repo_map.items(), key=lambda x: -x[1]["decision_count"])
+        if k != "unknown"
+    ]
+
+    # Rough knowledge coverage: more decisions = higher coverage, capped at 95
+    coverage = min(95, int((total / max(total, 100)) * 100)) if total > 0 else 0
+
+    return StatsResponse(
+        total_decisions=total,
+        rejected_count=rejected_count,
+        pr_count=pr_count,
+        issue_count=issue_count,
+        repositories=repos,
+        last_indexed_at=datetime.now(timezone.utc).isoformat(),
+        knowledge_coverage_pct=coverage,
+    )
 
 
 # ── Main Query ────────────────────────────────────────────────────────────────

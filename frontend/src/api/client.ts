@@ -5,6 +5,7 @@ import type {
   DriftRadarResponse,
   ADRExportResponse,
   HealthResponse,
+  StatsResponse,
   Citation,
 } from '../types/api';
 
@@ -37,6 +38,10 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 export const api = {
   checkHealth: (): Promise<HealthResponse> => {
     return request<HealthResponse>('/health');
+  },
+
+  fetchStats: (): Promise<StatsResponse> => {
+    return request<StatsResponse>('/stats');
   },
 
   query: (question: string, repo?: string): Promise<QueryResponse> => {

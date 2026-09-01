@@ -73,3 +73,21 @@ export interface HealthResponse {
   record_count: number;
   message: string;
 }
+
+export interface RepositoryStats {
+  repo: string;
+  decision_count: number;
+  rejected_count: number;
+  pr_count: number;
+  issue_count: number;
+}
+
+export interface StatsResponse {
+  total_decisions: number;
+  rejected_count: number;
+  pr_count: number;
+  issue_count: number;
+  repositories: RepositoryStats[];
+  last_indexed_at: string | null;
+  knowledge_coverage_pct: number;
+}
