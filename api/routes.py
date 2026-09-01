@@ -46,6 +46,10 @@ from api.schemas import (
     ConfidenceBreakdown,
     StatsResponse,
     RepositoryStats,
+    CreateSessionRequest,
+    ChatSessionSummary,
+    ChatSessionDetail,
+    ChatMessageSchema,
 )
 from continuum.retrieval import hybrid_retrieve
 from continuum.synthesis import synthesize_answer
@@ -234,20 +238,44 @@ async def query_decisions(request: QueryRequest):
         else response.confidence_breakdown
     )
 
+    citations_out = [
+        {
+            "text": c.text,
+            "source_url": c.source_url,
+            "source_type": c.source_type,
+            "source_id": c.source_id,
+            "confidence": c.confidence.value,
+            "author": c.author,
+            "quote": c.quote,
+        }
+        for c in response.citations
+    ]
+
+    # ── Persist to chat history if session_id provided ──
+    if request.session_id:
+        try:
+            from continuum.chat_store import save_message
+            save_message(
+                session_id=request.session_id,
+                role="user",
+                content=request.question,
+                mode="query",
+            )
+            save_message(
+                session_id=request.session_id,
+                role="assistant",
+                content=response.answer,
+                mode="query",
+                citations=citations_out,
+                confidence_summary=response.confidence_summary,
+                is_insufficient_evidence=response.is_insufficient_evidence,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to persist chat message: {e}")
+
     return QueryResponse(
         answer=response.answer,
-        citations=[
-            {
-                "text": c.text,
-                "source_url": c.source_url,
-                "source_type": c.source_type,
-                "source_id": c.source_id,
-                "confidence": c.confidence.value,
-                "author": c.author,
-                "quote": c.quote,
-            }
-            for c in response.citations
-        ],
+        citations=citations_out,
         confidence_summary=response.confidence_summary,
         confidence_breakdown=cb,
         decision_records_used=response.decision_records_used,
@@ -611,3 +639,43 @@ async def get_decision(decision_id: str):
     if not record:
         raise HTTPException(status_code=404, detail=f"Decision record '{decision_id}' not found")
     return record
+
+
+# ── Chat History ──────────────────────────────────────────────────────────────
+
+@router.post("/sessions", tags=["Chat History"])
+async def create_session(request: CreateSessionRequest):
+    """Create a new chat session. Returns {id: uuid}."""
+    from continuum.chat_store import create_session as _create
+    sid = _create(repo_url=request.repo_url, title=request.title)
+    if not sid:
+        raise HTTPException(status_code=500, detail="Failed to create session — check Supabase tables exist.")
+    return {"id": sid}
+
+
+@router.get("/sessions", tags=["Chat History"])
+async def list_sessions(limit: int = Query(default=30, le=100)):
+    """List recent chat sessions, newest first."""
+    from continuum.chat_store import list_sessions as _list
+    sessions = _list(limit=limit)
+    return {"sessions": sessions}
+
+
+@router.get("/sessions/{session_id}", tags=["Chat History"])
+async def get_session(session_id: str):
+    """Get a session with all its messages."""
+    from continuum.chat_store import get_session as _get
+    session = _get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
+@router.delete("/sessions/{session_id}", tags=["Chat History"])
+async def delete_session(session_id: str):
+    """Delete a session and all its messages."""
+    from continuum.chat_store import delete_session as _delete
+    ok = _delete(session_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Session not found or delete failed")
+    return {"deleted": session_id}

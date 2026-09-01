@@ -91,3 +91,29 @@ export interface StatsResponse {
   last_indexed_at: string | null;
   knowledge_coverage_pct: number;
 }
+
+// ── Chat History ──────────────────────────────────────────────────────────────
+
+export interface ChatSession {
+  id: string;
+  repo_url: string | null;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PersistedMessage {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  mode: string | null;
+  citations: Citation[] | null;
+  confidence_summary: string | null;
+  is_insufficient_evidence: boolean;
+  created_at: string;
+}
+
+export interface ChatSessionDetail extends ChatSession {
+  messages: PersistedMessage[];
+}

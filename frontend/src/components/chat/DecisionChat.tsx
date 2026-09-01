@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { api } from '../../api/client';
-import type { Citation } from '../../types/api';
+import type { Citation, ChatSessionDetail } from '../../types/api';
 import { MessageItem, type ChatMessage } from './MessageItem';
 import { MemoryOverview } from '../overview/MemoryOverview';
 
@@ -9,6 +9,8 @@ interface DecisionChatProps {
   externalQuery?: { text: string; mode?: 'query' | 'graveyard' } | null;
   onClearExternalQuery?: () => void;
   health: { status: string; recordCount: number; message: string } | null;
+  loadSession?: ChatSessionDetail | null;
+  onSessionCreated?: (sessionId: string, title: string) => void;
 }
 
 export const DecisionChat: React.FC<DecisionChatProps> = ({
@@ -16,14 +18,43 @@ export const DecisionChat: React.FC<DecisionChatProps> = ({
   externalQuery,
   onClearExternalQuery,
   health,
+  loadSession,
+  onSessionCreated,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<'query' | 'graveyard'>('query');
   const [isLoading, setIsLoading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load a saved session when directed from the sidebar
+  useEffect(() => {
+    if (!loadSession) return;
+    setSessionId(loadSession.id);
+    const restored: ChatMessage[] = loadSession.messages.map((m) => {
+      if (m.role === 'user') {
+        return { id: m.id, role: 'user' as const, content: m.content, mode: (m.mode as 'query' | 'graveyard') || 'query' };
+      }
+      return {
+        id: m.id,
+        role: 'assistant' as const,
+        question: '',
+        mode: (m.mode as 'query' | 'graveyard') || 'query',
+        data: {
+          answer: m.content,
+          citations: m.citations || [],
+          confidence_summary: (m.confidence_summary as any) || 'partial_evidence',
+          confidence_breakdown: { confirmed: 0, inferred: 0, unknown: 0 },
+          decision_records_used: [],
+          is_insufficient_evidence: m.is_insufficient_evidence,
+        },
+      };
+    });
+    setMessages(restored);
+  }, [loadSession]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,6 +80,19 @@ export const DecisionChat: React.FC<DecisionChatProps> = ({
     setInput('');
     setIsLoading(true);
 
+    // Auto-create session on first message
+    let activeSessionId = sessionId;
+    if (!activeSessionId) {
+      try {
+        const sess = await api.createSession(textToSend.slice(0, 80), selectedRepo || undefined);
+        activeSessionId = sess.id;
+        setSessionId(sess.id);
+        onSessionCreated?.(sess.id, textToSend.slice(0, 80));
+      } catch {
+        // Non-fatal — continue without persistence
+      }
+    }
+
     const userMessage: ChatMessage = {
       id: String(Date.now()),
       role: 'user',
@@ -61,8 +105,8 @@ export const DecisionChat: React.FC<DecisionChatProps> = ({
     try {
       const response =
         activeMode === 'graveyard'
-          ? await api.graveyard(textToSend, selectedRepo)
-          : await api.query(textToSend, selectedRepo);
+          ? await api.graveyard(textToSend, selectedRepo, activeSessionId ?? undefined)
+          : await api.query(textToSend, selectedRepo, activeSessionId ?? undefined);
 
       const assistantMessage: ChatMessage = {
         id: String(Date.now() + 1),

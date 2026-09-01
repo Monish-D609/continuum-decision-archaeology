@@ -7,6 +7,8 @@ import type {
   HealthResponse,
   StatsResponse,
   Citation,
+  ChatSession,
+  ChatSessionDetail,
 } from '../types/api';
 
 const API_BASE = window.location.origin;
@@ -44,17 +46,17 @@ export const api = {
     return request<StatsResponse>('/stats');
   },
 
-  query: (question: string, repo?: string): Promise<QueryResponse> => {
+  query: (question: string, repo?: string, sessionId?: string): Promise<QueryResponse> => {
     return request<QueryResponse>('/query', {
       method: 'POST',
-      body: JSON.stringify({ question, repo: repo || undefined }),
+      body: JSON.stringify({ question, repo: repo || undefined, session_id: sessionId || undefined }),
     });
   },
 
-  graveyard: (question: string, repo?: string): Promise<QueryResponse> => {
+  graveyard: (question: string, repo?: string, sessionId?: string): Promise<QueryResponse> => {
     return request<QueryResponse>('/graveyard', {
       method: 'POST',
-      body: JSON.stringify({ question, repo: repo || undefined }),
+      body: JSON.stringify({ question, repo: repo || undefined, session_id: sessionId || undefined }),
     });
   },
 
@@ -101,5 +103,26 @@ export const api = {
         confidence_summary: confidenceSummary,
       }),
     });
+  },
+
+  // ── Chat History ─────────────────────────────────────────────────────────
+
+  createSession: (title: string, repoUrl?: string): Promise<{ id: string }> => {
+    return request<{ id: string }>('/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ title, repo_url: repoUrl || null }),
+    });
+  },
+
+  listSessions: (): Promise<{ sessions: ChatSession[] }> => {
+    return request<{ sessions: ChatSession[] }>('/sessions');
+  },
+
+  getSession: (id: string): Promise<ChatSessionDetail> => {
+    return request<ChatSessionDetail>(`/sessions/${id}`);
+  },
+
+  deleteSession: (id: string): Promise<{ deleted: string }> => {
+    return request<{ deleted: string }>(`/sessions/${id}`, { method: 'DELETE' });
   },
 };

@@ -25,6 +25,10 @@ class QueryRequest(BaseModel):
         description="Optional repo filter in 'owner/repo' format, e.g. 'facebook/react'. "
         "When provided, only decisions from that repository are searched.",
     )
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Optional chat session UUID. When provided, the user message and response are persisted.",
+    )
     mode: Optional[str] = Field(
         default="query",
         description="Query mode: 'query' (default) or 'graveyard' (rejected alternatives only).",
@@ -270,6 +274,7 @@ class RepositoryStats(BaseModel):
     issue_count: int
 
 
+
 class StatsResponse(BaseModel):
     """Response for GET /api/stats — powers the Engineering Memory dashboard."""
     total_decisions: int = Field(description="Total indexed decision records")
@@ -279,4 +284,40 @@ class StatsResponse(BaseModel):
     repositories: list[RepositoryStats] = Field(default_factory=list)
     last_indexed_at: Optional[str] = Field(default=None, description="ISO timestamp of last indexing")
     knowledge_coverage_pct: int = Field(default=0, description="Rough decision coverage percentage (0-100)")
+
+
+# ── Chat History Schemas ──────────────────────────────────────────────────────
+
+class CreateSessionRequest(BaseModel):
+    repo_url: Optional[str] = Field(default=None)
+    title: str = Field(max_length=120)
+
+
+class ChatSessionSummary(BaseModel):
+    id: str
+    repo_url: Optional[str] = None
+    title: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+
+class ChatMessageSchema(BaseModel):
+    id: str
+    session_id: str
+    role: str
+    content: str
+    mode: Optional[str] = None
+    citations: Optional[list] = None
+    confidence_summary: Optional[str] = None
+    is_insufficient_evidence: bool = False
+    created_at: str
+
+
+class ChatSessionDetail(BaseModel):
+    id: str
+    repo_url: Optional[str] = None
+    title: Optional[str] = None
+    created_at: str
+    updated_at: str
+    messages: list[ChatMessageSchema] = Field(default_factory=list)
 
