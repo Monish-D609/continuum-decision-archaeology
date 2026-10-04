@@ -23,3 +23,7 @@ fix_start_command.py
 get_railway_logs.py
 test_query_live.py
 test_query_live2.py
+
+# Demo video recordings (exceed GitHub 100MB limit)
+[Dd]emo/
+*.mp4
