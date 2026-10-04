@@ -6,7 +6,9 @@ services:
     dockerContext: .
     region: singapore  # closest to India
 
-    # Render sets $PORT automatically — entrypoint.py already reads it
+    # entrypoint.py handles $PORT, timeout-keep-alive 75, and single-worker config
+    startCommand: python entrypoint.py
+
     envVars:
       - key: OPENROUTER_API_KEY
         sync: false          # set via Render dashboard / secret
@@ -22,6 +24,8 @@ services:
         sync: false
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: RENDER
+        value: "true"        # lets entrypoint.py detect prod and disable --reload
 
     healthCheckPath: /api/health
 

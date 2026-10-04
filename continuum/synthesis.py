@@ -180,7 +180,7 @@ def synthesize_answer(
         ]
 
         try:
-            response = llm.complete(messages, temperature=0.4, max_tokens=8192)
+            response = llm.complete(messages, temperature=0.4, max_tokens=4096)
         except LLMError as e:
             logger.error(f"All LLMs failed during synthesis: {e}")
             return QueryResponse(

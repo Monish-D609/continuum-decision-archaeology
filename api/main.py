@@ -33,7 +33,7 @@ bm25_index = BM25Index()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load BM25 index at startup."""
+    """Load BM25 index and warm up embedding model at startup."""
     logger.info("Loading decision records for BM25 index...")
     try:
         records = get_all_records()
@@ -42,6 +42,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to build BM25 index at startup: {e}")
         logger.warning("BM25 keyword search will be unavailable until records are loaded")
+
+    # Warm up embedding model so the first user query does not trigger a 40s cold-start timeout
+    try:
+        from continuum.embeddings import embed_text
+        logger.info("Warming up embedding model...")
+        embed_text("warmup")
+        logger.info("Embedding model warmed up and ready")
+    except Exception as e:
+        logger.warning(f"Failed to preload embedding model at startup: {e}")
+
     yield
 
 
