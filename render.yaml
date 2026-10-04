@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: continuum-decision-archaeology
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: singapore  # closest to India
+
+    # Render sets $PORT automatically — entrypoint.py already reads it
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false          # set via Render dashboard / secret
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: CF_ACCOUNT_ID
+        sync: false
+      - key: CF_API_TOKEN
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+    healthCheckPath: /api/health
+
+    # Free plan — note: spins down after 15 min of inactivity.
+    # Mitigate with UptimeRobot pinging /api/health every 10 min.
+    plan: free
