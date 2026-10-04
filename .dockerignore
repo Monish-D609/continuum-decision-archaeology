@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+dist/
+.eggs/
+
+# Node
+frontend/node_modules/
+frontend/.cache/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Git & CI
+.git/
+.gitignore
+.github/
+
+# Planning & docs artifacts
+.claude/
+reference/
+docs/screenshots/
+Demo/
+
+# Dev scripts & logs
+*.log
+add_cf_vars.py
+check_domain.py
+check_runtime_logs.py
+check_service_settings.py
+fix_start_command.py
+get_railway_logs.py
+poll_railway.py
+railway_deploy.py
+redeploy.py
+
+# Test files
+test_query_live*.py
+
+# Data caches (raw GitHub API cache — large, not needed at runtime)
+data/raw/

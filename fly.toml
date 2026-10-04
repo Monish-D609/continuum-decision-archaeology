@@ -1,0 +1,47 @@
+# fly.toml — Fly.io deployment configuration for Continuum
+# Deploy with: fly deploy
+# First-time setup: fly launch --no-deploy (then set secrets, then fly deploy)
+
+app = "continuum-decision-archaeology"
+primary_region = "sin"   # Singapore — closest to India
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  PYTHONUNBUFFERED = "1"
+
+# Secrets (set via: fly secrets set KEY=value) — do NOT put values here:
+#   fly secrets set OPENROUTER_API_KEY=...
+#   fly secrets set SUPABASE_URL=...
+#   fly secrets set SUPABASE_SERVICE_KEY=...
+#   fly secrets set GITHUB_TOKEN=...
+#   fly secrets set CF_ACCOUNT_ID=...
+#   fly secrets set CF_API_TOKEN=...
+
+[http_service]
+  internal_port = 8080
+  force_https   = true
+  auto_stop_machines  = false   # keep always-on (no sleep)
+  auto_start_machines = true
+  min_machines_running = 1      # always at least 1 instance up
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 25
+    soft_limit = 20
+
+[[vm]]
+  size   = "shared-cpu-1x"   # free tier
+  memory = "256mb"
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval     = "30s"
+    method       = "GET"
+    path         = "/api/health"
+    port         = 8080
+    timeout      = "10s"
+    type         = "http"
