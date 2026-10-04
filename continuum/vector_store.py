@@ -166,9 +166,9 @@ def upsert_batch(records: list[dict]) -> int:
 def semantic_search(
     query_embedding: list[float],
     top_k: int = SEMANTIC_TOP_K,
-    threshold: float = 0.0,
+    threshold: float = -1.0,
     repo_filter: str = None,
-) -> list[dict]:
+):
     """
     Search for similar decision records using cosine similarity.
     Returns records sorted by descending similarity.
@@ -295,7 +295,8 @@ def get_rejected_records(
     # Over-fetch and then filter for records with rejected alternatives
     candidates = semantic_search(
         query_embedding=query_embedding,
-        top_k=top_k * 4,
+        top_k=top_k * 6,
+        threshold=-1.0,
         repo_filter=repo_filter,
     )
 

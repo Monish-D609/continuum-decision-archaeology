@@ -290,20 +290,55 @@ async def graveyard_search(request: GraveyardRequest):
     """
     Search specifically for rejected alternatives — 'The Graveyard'.
 
-    Returns only decision records where alternatives were explicitly marked
-    as rejected, surfacing the institutional knowledge of what NOT to do.
+    Returns decision records where alternatives were explicitly evaluated
+    and rejected, surfacing institutional memory of failed experiments.
     """
+    from api.main import bm25_index
+    import json as _json
+
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
     logger.info(f"Graveyard query: {request.question!r} [repo={request.repo}]")
 
-    query_embedding = embed_text(request.question)
-    records = get_rejected_records(
-        query_embedding=query_embedding,
-        top_k=8,
+    # 1. Retrieve candidates using hybrid search (Semantic + BM25 keyword matching)
+    retrieved = hybrid_retrieve(
+        query=request.question,
+        bm25_index=bm25_index,
+        final_top_k=25,
         repo_filter=request.repo,
     )
+
+    # 2. Extract and prioritize records that have rejected alternatives
+    records = []
+    for r in retrieved:
+        rec = r.get("record_json", {})
+        if isinstance(rec, str):
+            try:
+                rec = _json.loads(rec)
+            except Exception:
+                rec = {}
+        alts = rec.get("alternatives_considered", [])
+        if any(isinstance(a, dict) and a.get("rejected") for a in alts):
+            records.append(r)
+        if len(records) >= 8:
+            break
+
+    # 3. Fallback: if hybrid candidate filter yields none, try direct vector search over rejected pool
+    if not records:
+        try:
+            query_embedding = embed_text(request.question)
+            records = get_rejected_records(
+                query_embedding=query_embedding,
+                top_k=8,
+                repo_filter=request.repo,
+            )
+        except Exception as e:
+            logger.warning(f"Vector fallback for graveyard failed: {e}")
+
+    # 4. If still no records, fall back to top retrieved records so user gets architectural context
+    if not records and retrieved:
+        records = retrieved[:5]
 
     if not records:
         return QueryResponse(
