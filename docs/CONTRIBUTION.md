@@ -18,7 +18,7 @@ Continuum Engineering Team
 │   ├── FastAPI Endpoints & Asynchronous Lifecycle
 │   ├── Supabase pgvector Indexing & DDL Migrations
 │   ├── In-Memory BM25 Index & RRF Merging Logic
-│   └── Railway Multi-Stage Docker Container Deployment
+│   └── Render Multi-Stage Docker Container Deployment
 │
 └── 🧠 Person 3: AI Architecture & Decision Pipeline Lead
     ├── Schema-Constrained Extraction Prompts (Pydantic / Zod)

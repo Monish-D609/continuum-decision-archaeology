@@ -3,11 +3,11 @@
 > Recovers the **WHY** behind engineering decisions from GitHub history.  
 > Every answer is citation-grounded with direct PR, issue, and commit links. Zero hallucination.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-continuumai.up.railway.app-6366f1?logo=railway&logoColor=white)](https://continuumai.up.railway.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-continuum--decision--archaeology.onrender.com-46E3B7?logo=render&logoColor=white)](https://continuum-decision-archaeology.onrender.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Enabled-818cf8.svg)](https://modelcontextprotocol.io)
-[![Deployed on Railway](https://img.shields.io/badge/Deployed%20on-Railway-0B0D0E?logo=railway)](https://railway.com)
+[![Deployed on Render](https://img.shields.io/badge/Deployed%20on-Render-46E3B7?logo=render&logoColor=white)](https://continuum-decision-archaeology.onrender.com)
 [![Supabase pgvector](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 
 ---
@@ -32,7 +32,7 @@
 
 ## 🌐 Live Deployment
 
-**→ [https://continuumai.up.railway.app](https://continuumai.up.railway.app)**
+**→ [https://continuum-decision-archaeology.onrender.com](https://continuum-decision-archaeology.onrender.com)**
 
 Continuum is live in production with 75 verified decision records indexed from `facebook/react`. No installation or configuration required — open the link and start investigating architectural decisions.
 
@@ -122,7 +122,7 @@ Engineering decisions accumulate critical context that lives nowhere in the code
 
 ### Infrastructure & Cloud
 - **Database:** Supabase Managed PostgreSQL + `pgvector`
-- **Application Hosting:** Railway (multi-stage Docker container)
+- **Application Hosting:** Render (multi-stage Docker container)
 - **CI/CD:** Git push-to-deploy pipeline
 
 ---
@@ -252,7 +252,7 @@ Add Continuum to your MCP configuration (`claude_desktop_config.json` or Cursor 
       "command": "python",
       "args": ["/path/to/continuum/mcp_server.py"],
       "env": {
-        "CONTINUUM_API_URL": "https://continuumai.up.railway.app"
+        "CONTINUUM_API_URL": "https://continuum-decision-archaeology.onrender.com"
       }
     }
   }
@@ -315,7 +315,7 @@ The hybrid RRF pipeline achieves near-peak precision in both exact-symbol and co
 | Hallucination Prevention | 🟢 Structural | `is_insufficient_evidence` + confidence schema enforced |
 | Citation Completeness | 🟢 100% per answer | Every claim carries a verifiable GitHub artifact link |
 | API Reliability | 🟢 5-tier LLM fallback | Zero hard crashes in production |
-| Production Readiness | 🟢 Live on Railway | Public URL, multi-stage Docker, CI/CD |
+| Production Readiness | 🟢 Live on Render | Public URL, multi-stage Docker, CI/CD |
 | Knowledge Base | 🟡 75 records | `facebook/react` indexed; expandable to any public repo |
 | Index Freshness | 🟡 Manual re-index | Webhook-triggered automation on roadmap |
 

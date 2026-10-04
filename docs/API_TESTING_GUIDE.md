@@ -5,7 +5,7 @@ This guide provides test commands, payload examples, and expected responses for 
 ---
 
 ## 🌐 Base URL
-- **Production:** `https://continuumai.up.railway.app`
+- **Production:** `https://continuum-decision-archaeology.onrender.com`
 - **Local:** `http://localhost:8000`
 
 ---
@@ -16,7 +16,7 @@ Submit a natural language architectural inquiry.
 
 ### Request:
 ```bash
-curl -X POST "https://continuumai.up.railway.app/api/query" \
+curl -X POST "https://continuum-decision-archaeology.onrender.com/api/query" \
   -H "Content-Type: application/json" \
   -d '{
     "question": "Why did React remove SyntheticEvent pooling?",
@@ -57,7 +57,7 @@ Inspect rejected alternatives, discarded prototypes, and explicit rejection reas
 
 ### Request:
 ```bash
-curl -X POST "https://continuumai.up.railway.app/api/graveyard" \
+curl -X POST "https://continuum-decision-archaeology.onrender.com/api/graveyard" \
   -H "Content-Type: application/json" \
   -d '{
     "question": "What alternatives were rejected when redesigning JSX transform?",
@@ -73,7 +73,7 @@ Submit a code block to surface the historical PR discussions explaining why it e
 
 ### Request:
 ```bash
-curl -X POST "https://continuumai.up.railway.app/api/blame" \
+curl -X POST "https://continuum-decision-archaeology.onrender.com/api/blame" \
   -H "Content-Type: application/json" \
   -d '{
     "code_snippet": "function scheduleCallback(priorityLevel, callback, options) { ... }",
@@ -90,7 +90,7 @@ Scan recent commits or changes against established historical invariants.
 
 ### Request:
 ```bash
-curl -X POST "https://continuumai.up.railway.app/api/drift-radar" \
+curl -X POST "https://continuum-decision-archaeology.onrender.com/api/drift-radar" \
   -H "Content-Type: application/json" \
   -d '{
     "principle": "Pure render functions must not mutate global state or produce side effects during reconciliation.",
@@ -106,7 +106,7 @@ Check a proposed PR title/description against historically failed approaches.
 
 ### Request:
 ```bash
-curl -X POST "https://continuumai.up.railway.app/api/deja-vu" \
+curl -X POST "https://continuum-decision-archaeology.onrender.com/api/deja-vu" \
   -H "Content-Type: application/json" \
   -d '{
     "pr_title": "Add object pooling to synthetic event system",
@@ -133,7 +133,7 @@ Or connect it to Claude Desktop / Cursor:
       "command": "python",
       "args": ["c:/Users/Monish D/Documents/Tribal Loss/mcp_server.py"],
       "env": {
-        "CONTINUUM_API_URL": "https://continuumai.up.railway.app"
+        "CONTINUUM_API_URL": "https://continuum-decision-archaeology.onrender.com"
       }
     }
   }
